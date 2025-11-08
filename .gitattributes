@@ -1,0 +1,5 @@
+adapters/**/adapter_model*.safetensors filter=lfs diff=lfs merge=lfs -text
+adapters/**/checkpoint-*/pytorch_model*.bin filter=lfs diff=lfs merge=lfs -text
+adapters/**/checkpoint-*/optimizer.pt filter=lfs diff=lfs merge=lfs -text
+adapters/**/checkpoint-*/trainer_state.json filter=lfs diff=lfs merge=lfs -text
+adapters/**/checkpoint-*/scheduler.pt filter=lfs diff=lfs merge=lfs -text
