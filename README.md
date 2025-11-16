@@ -16,3 +16,13 @@ Adapter weights live under `adapters/*` and are tracked via Git LFS.
 | split | acc_answerables | refusal_on_unanswerables | false_refusal_on_answerables |
 |------|------------------:|--------------------------:|-----------------------------:|
 | full | 0.900 | 1.000 | 0.100 |
+
+### Phase‑A calibrated snapshot
+```
+{
+  "N": 500,
+  "acc_answerables": 0.9,
+  "refusal_on_unanswerables": 1.0,
+  "false_refusal_on_answerables": 0.1
+}
+```
