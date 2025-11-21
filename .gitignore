@@ -15,6 +15,7 @@ runs/
 # Data (keep only a tiny sample)
 data/*
 !data/mixed_eval_v1_50.jsonl
+!data/mixed_eval_v1_holdout.jsonl
 
 # Caches
 .cache/
