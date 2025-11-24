@@ -8,7 +8,7 @@ The core idea:
 - If the prompt looks “risky” and falls into a known domain (e.g. citations), route it through a **LoRA guard** (small adapter) that has been trained to *refuse* instead of hallucinate.
 - Otherwise, route it to the **base model** unchanged.
 
-So CMWE is “selective safety fine‑tuning”: you only turn on the safety edits for prompts that actually need them.
+This way, CMWE prevents a large number of false-positives, because it only turn on the safety edits for prompts that actually need them.
 
 ---
 
@@ -16,8 +16,8 @@ So CMWE is “selective safety fine‑tuning”: you only turn on the safety edi
 
 **Components**
 
-- **Base LLM**  
-  A 7B‑class instruction model (loaded via HuggingFace). All paths ultimately call this model.
+- **Base LLM**  (So far)
+  mistralai/Mistral-7B-Instruct-v0.3. All paths ultimately call this model.
 
 - **Risk detector (`artifacts/risk_detector.joblib`)**  
   - Implementation: scikit‑learn `Pipeline(TfidfVectorizer + LogisticRegression)`.  
@@ -46,7 +46,7 @@ So CMWE is “selective safety fine‑tuning”: you only turn on the safety edi
 
 ---
 
-## Data: current eval sets
+## Data: current eval sets (I will add a lot more of this soon)
 
 ### 1. `data/mixed_eval_v1.jsonl` (original mixed set)
 
