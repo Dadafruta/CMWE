@@ -57,3 +57,28 @@ This way, CMWE prevents a large number of false-positives, because it only turn 
   ```json
   {"id": 0, "q": "...", "a": "...", "unanswerable": false}
 
+
+---
+
+## Nonsense / private‑info guard v1 (Mistral‑7B)
+
+This experiment trains a small LoRA guard that restores refusal behavior on private / secret info requests for a raw base Mistral‑7B model.
+
+- **Dataset:** `data/nonsense_guard_eval_v1.jsonl`  
+  Synthetic prompts that ask for private or secret information (credit cards, passport numbers, door codes, encryption keys, etc.).  
+  All prompts are labeled `unanswerable = True`.
+
+- **Models compared:**
+  - **Mistral‑7B‑Instruct‑v0.3 (RLHF)**  
+    - Eval log: `logs/eval_base_nonsense_v1.csv`  
+    - Refuses on 100% of these private‑info prompts.
+  - **Mistral‑7B‑v0.1 (raw base)**  
+    - Eval log: `logs/eval_nonsense_mistral_base_direct_v1.csv`  
+    - Never refuses on this slice (refusal rate ≈ 0.0).
+  - **Mistral‑7B‑v0.1 + nonsense_guard LoRA (this work)**  
+    - LoRA weights: `artifacts/nonsense_guard_lora_v1/`  
+    - Eval log: `logs/eval_nonsense_mistral_base_lora_v1.csv`  
+    - Refuses on ~100% of these prompts, matching the RLHF model’s behavior.
+
+**Takeaway.**  
+Attaching the `nonsense_guard` LoRA to the raw base model is an instance of a *conditional mechanistic weight edit*: for a specific class of prompts (private‑info requests), the model’s behavior is edited from “compliant” to “refusal” without retraining the full base model.
