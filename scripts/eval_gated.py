@@ -3,7 +3,7 @@ from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 
-BASE = "mistralai/Mistral-7B-Instruct-v0.3"
+BASE = "mistralai/Mistral-7B-v0.1"
 ADP_MATH = "adapters/math_guard"
 ADP_CITE  = "adapters/citation_guard"
 DET_PATH  = "artifacts/risk_detector.joblib"
@@ -135,3 +135,23 @@ def main():
 
 if __name__=="__main__":
     main()
+
+
+# === Patched format_chat to support chat and non-chat models ===
+def format_chat(tok, q, device):
+    """Format a user prompt q into input IDs.
+
+    - If the tokenizer has a chat_template (chat/instruct models), use it.
+    - Otherwise (base causal LM), just tokenize q directly.
+    """
+    if getattr(tok, "chat_template", None):
+        msgs = [{"role": "user", "content": q}]
+        ids = tok.apply_chat_template(
+            msgs,
+            return_tensors="pt",
+            add_generation_prompt=True,
+        )
+    else:
+        enc = tok(q, return_tensors="pt")
+        ids = enc["input_ids"]
+    return ids.to(device)
