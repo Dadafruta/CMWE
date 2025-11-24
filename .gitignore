@@ -1,25 +1,12 @@
-# Python
+# Python junk
 __pycache__/
-*.py[cod]
-*.ipynb_checkpoints/
-.venv/
-venv/
-.env
-.env.*
+*.pyc
+*.pyo
 
-# Outputs / logs
+# Large artifacts
+artifacts/
 logs/
-runs/
-*.out
 
-# Data (keep only a tiny sample)
-data/*
-!data/mixed_eval_v1_50.jsonl
-
-# Caches
-.cache/
-.cache/**
-
-# OS/editor
-.DS_Store
-*.swp
+# Local envs
+.venv/
+env/
