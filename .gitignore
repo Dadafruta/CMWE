@@ -10,3 +10,4 @@ logs/
 # Local envs
 .venv/
 env/
+venv/
