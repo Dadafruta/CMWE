@@ -103,3 +103,103 @@ prompts, while the LoRA-augmented model reaches a refusal rate of 1.0 on those
 prompts but also over-refuses benign QA. This shows the LoRA acts as a strong
 “safety edit” that should be applied conditionally (via a router / risk
 detector) rather than being baked into the base model.
+
+---
+
+## Nonsense / private‑info guard (Mistral‑7B)
+
+This section sketches a small **conditional mechanistic weight edit** for private / secret information requests  
+(e.g. credit cards, passport numbers, encryption keys).
+
+### Dataset
+
+All data lives in `data/`:
+
+- `data/nonsense_guard_train_v1.jsonl` – 200 synthetic training prompts requesting:
+  - private financial info (credit cards, bank accounts),
+  - government / secret facility details (door codes, GPS coordinates),
+  - other clearly non‑public information.
+- `data/nonsense_guard_eval_v1.jsonl` – 50 held‑out prompts from the same template family.
+- `data/mixed_nonsense_eval_v1.jsonl` – 250 mixed prompts:
+  - 50 private‑info prompts (the above style), all labeled `unanswerable=True`;
+  - 200 benign factual QA prompts, labeled `unanswerable=False`.
+
+Format is line‑delimited JSON:
+
+\`\`\`json
+{"id": 0, "q": "...", "a": "...", "unanswerable": true, "bucket": "B_private_info_nonsense"}
+\`\`\`
+
+### Models
+
+We compare three Mistral‑7B variants:
+
+1. **Mistral‑7B‑Instruct‑v0.3 (RLHF)**
+   - Loaded via HuggingFace as the instruct checkpoint.
+   - On `data/nonsense_guard_eval_v1.jsonl`:
+     - `refusal_on_unanswerables ≈ 1.0` (always refuses).
+
+2. **Mistral‑7B‑v0.1 (raw base)**
+   - Same architecture, but pre‑RLHF base.
+   - On `data/nonsense_guard_eval_v1.jsonl`:
+     - `refusal_on_unanswerables ≈ 0.0` (never refuses).
+
+3. **Mistral‑7B‑v0.1 + nonsense_guard LoRA (this repo)**
+   - LoRA weights: `artifacts/nonsense_guard_lora_v1/`
+   - Same raw base model as (2), with a small adapter applied.
+
+### Training the guard
+
+Training script:
+
+\`\`\bash
+python scripts/train_nonsense_guard_v1.py \
+  --train data/nonsense_guard_train_v1.jsonl \
+  --out_dir artifacts/nonsense_guard_lora_v1
+\`\`\`
+
+This fine‑tunes a low‑rank adapter on the 200 private‑info prompts to **refuse** rather than comply.
+
+### Evaluation
+
+Pure private‑info slice:
+
+- Script: `scripts/eval_nonsense_mistral_base.py` (raw base)  
+- Script: `scripts/eval_nonsense_mistral_lora.py`  (base + LoRA)  
+- Logs:
+  - `logs/eval_nonsense_mistral_base_v1.csv`
+  - `logs/eval_nonsense_mistral_base_lora_v1.csv`
+
+On this eval set:
+
+- Raw base: `refusal_on_unanswerables ≈ 0.0`
+- +LoRA:     `refusal_on_unanswerables ≈ 1.0` (matches RLHF instruct model)
+
+Mixed eval slice:
+
+- Scripts:
+  - `scripts/eval_nonsense_mistral_base_mixed.py`
+  - `scripts/eval_nonsense_mistral_lora_mixed.py`
+- Logs:
+  - `logs/eval_nonsense_mistral_base_mixed_v1.csv`
+  - `logs/eval_nonsense_mistral_base_lora_mixed_v1.csv`
+
+On `data/mixed_nonsense_eval_v1.jsonl`:
+
+- Raw base:
+  - `N = 250`, `N_unanswerable = 50`
+  - `refusal_on_unanswerables ≈ 0.0`
+- Base + nonsense_guard LoRA:
+  - `N = 250`, `N_unanswerable = 50`
+  - `refusal_on_unanswerables ≈ 1.0`
+
+Benign QA behavior is intentionally not heavily optimized here; the point of this slice is the **directional edit** on private‑info prompts.
+
+### Takeaway
+
+- RLHF instruct model = “safe but baked‑in”: always refuses these private‑info prompts.  
+- Raw base = “compliant but unsafe”: happily answers them.  
+- Adding the small `nonsense_guard` LoRA to the raw base moves it to **“refusal” on exactly this class of prompts**, without retraining the full model.
+
+This is an instance of a **conditional mechanistic weight edit**:
+attaching a tiny adapter implements a safety‑relevant behavior change for a targeted slice of inputs.
