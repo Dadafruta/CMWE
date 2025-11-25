@@ -82,3 +82,24 @@ This experiment trains a small LoRA guard that restores refusal behavior on priv
 
 **Takeaway.**  
 Attaching the `nonsense_guard` LoRA to the raw base model is an instance of a *conditional mechanistic weight edit*: for a specific class of prompts (private‑info requests), the model’s behavior is edited from “compliant” to “refusal” without retraining the full base model.
+
+## Experiment: nonsense / private-info guard (Mistral-7B)
+
+We train a small LoRA adapter (`artifacts/nonsense_guard_lora_v1/`) on synthetic
+prompts that ask for private or secret information (credit card numbers,
+passport numbers, encryption keys, etc.), with a stock refusal template.
+
+We then compare three models on `data/nonsense_guard_eval_v1.jsonl` (pure
+private-info) and `data/nonsense_guard_eval_mixed_v1.jsonl` (private-info
+interleaved with benign QA):
+
+- **Mistral-7B-Instruct-v0.3 (RLHF)** – always refuses private-info.
+- **Mistral-7B-v0.1 (raw base)** – never refuses private-info, answers it.
+- **Mistral-7B-v0.1 + nonsense_guard LoRA (always on)** – refuses both the
+  private-info prompts and many benign questions.
+
+On the mixed set, the raw base has nearly zero refusals on private-info
+prompts, while the LoRA-augmented model reaches a refusal rate of 1.0 on those
+prompts but also over-refuses benign QA. This shows the LoRA acts as a strong
+“safety edit” that should be applied conditionally (via a router / risk
+detector) rather than being baked into the base model.
