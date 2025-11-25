@@ -46,3 +46,13 @@ Dataset: `data/nonsense_guard_eval_mixed_v1.jsonl`
   - qualitatively: refuses both private‑info and benign questions.
 
 Takeaway: the nonsense_guard LoRA restores strong refusal on private‑info prompts, but when applied unconditionally it also causes many false refusals on benign QA. This motivates using the LoRA as a *conditional* guard that only activates on high‑risk prompts.
+
+### Metrics (mixed benign + private-info)
+
+- **Mistral-7B-v0.1 (raw base)**  
+  - refusal_on_unanswerables: 0.000  
+  - false_refusal_on_answerables: 0.000
+
+- **Mistral-7B-v0.1 + nonsense_guard LoRA**  
+  - refusal_on_unanswerables: 1.000  
+  - false_refusal_on_answerables: 1.000
