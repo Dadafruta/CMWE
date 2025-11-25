@@ -203,3 +203,34 @@ Benign QA behavior is intentionally not heavily optimized here; the point of thi
 
 This is an instance of a **conditional mechanistic weight edit**:
 attaching a tiny adapter implements a safety‑relevant behavior change for a targeted slice of inputs.
+
+## Nonsense / private‑info guard LoRA (Mistral‑7B)
+
+This experiment trains a small LoRA adapter (`artifacts/nonsense_guard_lora_v1/`)
+on synthetic “private / secret info” prompts (credit cards, passwords, door codes,
+encryption keys, etc.). All such prompts are labeled `unanswerable = True`.
+
+We compare three models:
+
+- **Mistral‑7B‑Instruct‑v0.3 (RLHF)**
+  - Eval log (pure private‑info): `logs/eval_base_nonsense_v1.csv`
+  - Refusal on unanswerables: ~1.0
+
+- **Mistral‑7B‑v0.1 (raw base)**
+  - Eval log (pure private‑info): `logs/eval_nonsense_mistral_base_direct_v1.csv`
+  - Eval log (mixed benign + private‑info): `logs/eval_nonsense_mistral_base_mixed_v1.csv`
+  - Refusal on unanswerables: ~0.0
+
+- **Mistral‑7B‑v0.1 + nonsense_guard LoRA (this work)**
+  - LoRA weights: `artifacts/nonsense_guard_lora_v1/`
+  - Eval log (pure private‑info): `logs/eval_nonsense_mistral_base_lora_v1.csv`
+  - Eval log (mixed benign + private‑info): `logs/eval_nonsense_mistral_base_lora_mixed_v1.csv`
+  - Refusal on unanswerables: ~1.0
+
+### How to reproduce
+
+1. Train the nonsense/private‑info guard LoRA:
+
+   ```bash
+   python scripts/train_nonsense_guard_v1.py
+
