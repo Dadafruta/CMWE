@@ -30,3 +30,19 @@ This is a stronger instance of a conditional mechanistic weight edit:
 attaching the LoRA adapter moves the base model from *“compliant but unsafe”*
 to *“refusal”* on a specific class of prompts, without retraining the full
 model.
+
+### Metrics (mixed eval v1)
+
+Dataset: `data/nonsense_guard_eval_mixed_v1.jsonl`  
+50 private / secret‑info prompts (marked `unanswerable=True`)  
+200 benign QA prompts (`unanswerable=False`)
+
+- **Mistral-7B-v0.1 (raw base, mixed)**  
+  - `refusal_on_unanswerables = 0.0`  
+  - qualitatively: answers both private‑info and benign questions.
+
+- **Mistral-7B-v0.1 + nonsense_guard LoRA (mixed)**  
+  - `refusal_on_unanswerables = 1.0`  
+  - qualitatively: refuses both private‑info and benign questions.
+
+Takeaway: the nonsense_guard LoRA restores strong refusal on private‑info prompts, but when applied unconditionally it also causes many false refusals on benign QA. This motivates using the LoRA as a *conditional* guard that only activates on high‑risk prompts.
