@@ -1,10 +1,6 @@
 ---
 base_model: mistralai/Mistral-7B-Instruct-v0.3
 library_name: peft
-tags:
-- base_model:adapter:mistralai/Mistral-7B-Instruct-v0.3
-- lora
-- transformers
 ---
 
 # Model Card for Model ID
@@ -203,4 +199,4 @@ Carbon emissions can be estimated using the [Machine Learning Impact calculator]
 [More Information Needed]
 ### Framework versions
 
-- PEFT 0.17.1
+- PEFT 0.12.0

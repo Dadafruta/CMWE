@@ -12,9 +12,7 @@ if tok.pad_token is None:
 
 def load_base():
     try:
-        from transformers import BitsAndBytesConfig
-        bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
-        return AutoModelForCausalLM.from_pretrained(MODEL, device_map="auto", quantization_config=bnb)
+        return AutoModelForCausalLM.from_pretrained(MODEL, device_map="auto", )
     except Exception:
         return AutoModelForCausalLM.from_pretrained(MODEL, device_map="auto", torch_dtype=torch.bfloat16)
 
