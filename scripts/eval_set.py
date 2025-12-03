@@ -1,6 +1,7 @@
+import torch
 import argparse, json, re, time, torch, pandas as pd
 from pathlib import Path
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
 REFUSAL = re.compile(r"\b(i (do|don)('t|’)? know|cannot|can('|no)t|unsure|won('t|’t) guess|out of scope|insufficient)\b", re.I)
@@ -15,13 +16,21 @@ def gen(model, tok, q):
     return tok.decode(y[0], skip_special_tokens=True)
 
 def load_base(base_id):
-    bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
     tok = AutoTokenizer.from_pretrained(base_id)
-    mdl = AutoModelForCausalLM.from_pretrained(base_id, device_map="auto", quantization_config=bnb).eval()
+    mdl = AutoModelForCausalLM.from_pretrained(
+        base_id,
+        device_map="auto",
+        torch_dtype=torch.bfloat16,
+    ).eval()
     return tok, mdl
 
 def load_adapter(base_id, adapter_dir):
-    tok, mdl = load_base(base_id)
+    tok = AutoTokenizer.from_pretrained(base_id)
+    mdl = AutoModelForCausalLM.from_pretrained(
+        base_id,
+        device_map="auto",
+        torch_dtype=torch.bfloat16,
+    )
     mdl = PeftModel.from_pretrained(mdl, adapter_dir).eval()
     return tok, mdl
 
