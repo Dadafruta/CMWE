@@ -4,3 +4,6 @@
 # (optional) keep CSV/plots in normal git even if large-ish
 *.csv         -filter -diff -merge text
 *.png         -filter -diff -merge binary
+data/*_train_big.jsonl filter=lfs diff=lfs merge=lfs -text
+data/*_train.jsonl     filter=lfs diff=lfs merge=lfs -text
+data/selfplay_*.jsonl  filter=lfs diff=lfs merge=lfs -text
