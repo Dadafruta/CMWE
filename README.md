@@ -1,269 +1,126 @@
-# CMWE: Conditional Mechanistic Weight Edits
+# CMWE
 
-This repo contains an experimental system for reducing certain classes of LLM hallucinations by **conditionally editing the model’s weights at inference time**.
+**CMWE** is a small research codebase for studying hallucinations and refusals in math and citation tasks.
 
-The core idea:
+The core idea is:
 
-- Run a **risk detector** and a simple **domain classifier** on each prompt.
-- If the prompt looks “risky” and falls into a known domain (e.g. citations), route it through a **LoRA guard** (small adapter) that has been trained to *refuse* instead of hallucinate.
-- Otherwise, route it to the **base model** unchanged.
+* Use self-play to generate high-quality labeled data for:
+  * **Math hallucinations** (impossible / undefined operations over the reals).
+  * **Citation hallucinations** (fake papers, DOIs, URLs, PMIDs, etc.).
+  * **Benign out‑of‑domain prompts** that should be answered normally.
+* Train simple **guards** and **routers** on this data.
+* Evaluate them on **distribution‑shifted, template‑varied test sets** to measure real generalization, not just memorization.
 
-This way, CMWE prevents a large number of false-positives, because it only turn on the safety edits for prompts that actually need them.
-
----
-
-## High‑level architecture
-
-**Components**
-
-- **Base LLM**  (So far)
-  mistralai/Mistral-7B-Instruct-v0.3. All paths ultimately call this model.
-
-- **Risk detector (`artifacts/risk_detector.joblib`)**  
-  - Implementation: scikit‑learn `Pipeline(TfidfVectorizer + LogisticRegression)`.  
-  - Input: text of the query.  
-  - Output: scalar risk score in \[0, 1] ≈ probability that the prompt is “unanswerable / hallucination‑prone”.
-
-- **Domain routing**  
-  - Light heuristic rules (regex / prompt patterns) classify prompts into domains:
-    - `base` (normal QA / everything else),
-    - `citation` (requests for DOIs, PubMed IDs, paper citations, etc.),
-    - `math` (math‑style prompts; currently mostly unused in v1 experiments).
-
-- **LoRA guards**
-  - `citation_guard`: LoRA adapter trained to refuse fabricated citations and IDs with a stock refusal template.
-  - `math_guard`: LoRA adapter trained to refuse / handle undefined math (e.g. 1/0, ln(0)).  
-  - At runtime, if a prompt is high‑risk and matches a guard’s domain, CMWE activates the corresponding LoRA adapter for that generation.
-
-- **Gating logic (`scripts/eval_gated.py`)**
-  - For each prompt:
-    1. Compute risk score with the detector.
-    2. Classify the domain (base vs citation vs math).
-    3. Compare risk against per‑domain thresholds (`--th_math`, `--th_cite`).
-    4. Choose `route` ∈ {`base`, `citation_guard`, `math_guard`}.
-    5. Run the model in the chosen mode and log:
-       - `q`, `out`, `route`, `risk`, `unanswerable`, `correct`, `refused`.
+This repo currently focuses on:
+1. Building varied JSONL eval sets for math & citation hallucinations.
+2. Self‑play synthesis of training data.
+3. Basic evaluation scripts and sanity checks.
 
 ---
 
-## Data: current eval sets (I will add a lot more of this soon)
+## Repository structure (high level)
 
-### 1. `data/mixed_eval_v1.jsonl` (original mixed set)
+> Filenames below are based on the current repo. If something moves, treat this as a guide rather than a strict spec.
 
-- ~500 prompts, with labels:
-  - `unanswerable = False`: normal factual QA.
-  - `unanswerable = True`: mostly citation / “unanswerable question” style.
-- Format:
-  ```json
-  {"id": 0, "q": "...", "a": "...", "unanswerable": false}
+### `data/`
 
+Main JSONL datasets; one JSON object per line.
 
----
+Key files (non‑exhaustive):
 
-## Nonsense / private‑info guard v1 (Mistral‑7B)
+* **Mixed eval (varied, v4)**  
+  * `data/mixed_eval_varied_v4.jsonl`  
+    * ~8k items, four buckets:
+      * `"A_normal"` – answerable factual / math QAs.
+      * `"B_halluc_cite"` – should refuse fake citations / IDs.
+      * `"B_halluc_math"` – should refuse impossible / undefined math.
+      * `"C_unrelated"` – answerable but out‑of‑domain prompts (code/chat/etc.).
+    * Roughly 50% of items are marked `{"unanswerable": true}`.
+  * `data/mixed_eval_varied_v4_holdout.jsonl`  
+    * A template‑varied holdout set, same bucket mix as train.
+  * `data/mixed_eval_varied_v4_holdout_disjoint.jsonl`  
+    * “Disjoint” holdout built to avoid simple train–test leakage:
+      * No exact or simple‑normalized question overlap with train.
+      * Significantly reduced template‑family overlap.
 
-This experiment trains a small LoRA guard that restores refusal behavior on private / secret info requests for a raw base Mistral‑7B model.
+* **Legacy / earlier eval sets**  
+  * `data/mixed_eval_v1*.jsonl`, `data/mixed_eval_v2*.jsonl`, `data/mixed_eval_v3*.jsonl`  
+  * `data/mixed_eval_big_v1.jsonl`, etc.  
+  These are earlier experiments and can be useful for ablations, but v4 is the main line.
 
-- **Dataset:** `data/nonsense_guard_eval_v1.jsonl`  
-  Synthetic prompts that ask for private or secret information (credit cards, passport numbers, door codes, encryption keys, etc.).  
-  All prompts are labeled `unanswerable = True`.
+* **Self‑play training data (guards)**  
+  * `data/cite_refusal_train.jsonl`, `data/cite_refusal_train_big.jsonl`  
+  * `data/math_refusal_train.jsonl`, `data/math_refusal_train_big.jsonl`  
+  * `data/cite_refusal_synth.jsonl`, `data/math_refusal_synth.jsonl`  
+  These contain prompts + model responses labeled for refusal / compliance.
 
-- **Models compared:**
-  - **Mistral‑7B‑Instruct‑v0.3 (RLHF)**  
-    - Eval log: `logs/eval_base_nonsense_v1.csv`  
-    - Refuses on 100% of these private‑info prompts.
-  - **Mistral‑7B‑v0.1 (raw base)**  
-    - Eval log: `logs/eval_nonsense_mistral_base_direct_v1.csv`  
-    - Never refuses on this slice (refusal rate ≈ 0.0).
-  - **Mistral‑7B‑v0.1 + nonsense_guard LoRA (this work)**  
-    - LoRA weights: `artifacts/nonsense_guard_lora_v1/`  
-    - Eval log: `logs/eval_nonsense_mistral_base_lora_v1.csv`  
-    - Refuses on ~100% of these prompts, matching the RLHF model’s behavior.
+* **Misc / other evals**  
+  * `data/refusal_eval_v3.jsonl`, `data/refusal_eval_v3_tagged.jsonl`  
+  * `data/qa_eval*.jsonl`, `data/nonsense_guard_eval_v1.jsonl`, etc.  
+  Used for side‑experiments and sanity checks.
 
-**Takeaway.**  
-Attaching the `nonsense_guard` LoRA to the raw base model is an instance of a *conditional mechanistic weight edit*: for a specific class of prompts (private‑info requests), the model’s behavior is edited from “compliant” to “refusal” without retraining the full base model.
+* **Checksums**  
+  * `data/SHA256SUMS.txt` – SHA‑256 digests for the main JSONL artifacts so others can verify they downloaded the exact same data.
 
-## Experiment: nonsense / private-info guard (Mistral-7B)
+### `scripts/`
 
-We train a small LoRA adapter (`artifacts/nonsense_guard_lora_v1/`) on synthetic
-prompts that ask for private or secret information (credit card numbers,
-passport numbers, encryption keys, etc.), with a stock refusal template.
+Python utilities for generating data and running checks.
 
-We then compare three models on `data/nonsense_guard_eval_v1.jsonl` (pure
-private-info) and `data/nonsense_guard_eval_mixed_v1.jsonl` (private-info
-interleaved with benign QA):
+Important ones (again, not exhaustive):
 
-- **Mistral-7B-Instruct-v0.3 (RLHF)** – always refuses private-info.
-- **Mistral-7B-v0.1 (raw base)** – never refuses private-info, answers it.
-- **Mistral-7B-v0.1 + nonsense_guard LoRA (always on)** – refuses both the
-  private-info prompts and many benign questions.
+* **Varied eval builders**
 
-On the mixed set, the raw base has nearly zero refusals on private-info
-prompts, while the LoRA-augmented model reaches a refusal rate of 1.0 on those
-prompts but also over-refuses benign QA. This shows the LoRA acts as a strong
-“safety edit” that should be applied conditionally (via a router / risk
-detector) rather than being baked into the base model.
+  * `scripts/build_mixed_eval_varied_v4.py`  
+    * Core script that combines template buckets into `mixed_eval_varied_v4.jsonl` with target sizes and bucket mix.
+  
+  * `scripts/make_disjoint_holdout_v4.py`  
+    * Takes an initial holdout candidate pool and iteratively filters / tops it up to build `mixed_eval_varied_v4_holdout_disjoint.jsonl` with:
+      * No exact or simple‑normalized Q overlap vs train.
+      * Limited template‑family overlap.
 
----
+  * `scripts/make_varied_eval_v1.py`, `scripts/build_mixed_eval_varied_v2.py`, `scripts/build_mixed_eval_varied_v3.py`  
+    * Earlier iterations of the same idea; useful for ablations and understanding the design evolution.
 
-## Nonsense / private‑info guard (Mistral‑7B)
+  * `scripts/gen_varied_datasets.py`  
+    * Helper / meta‑script that wires together the various `build_*` and `make_*` stages.
 
-This section sketches a small **conditional mechanistic weight edit** for private / secret information requests  
-(e.g. credit cards, passport numbers, encryption keys).
+* **Self‑play runner**
 
-### Dataset
+  * `scripts/selfplay_synth_runner.py`  
+    * Wrapper for long‑running self‑play synthesis jobs.  
+    * Typically launched under `tmux` with a specific domain (`math` vs `cite`) and a target count.
 
-All data lives in `data/`:
+* **Sanity checks**
 
-- `data/nonsense_guard_train_v1.jsonl` – 200 synthetic training prompts requesting:
-  - private financial info (credit cards, bank accounts),
-  - government / secret facility details (door codes, GPS coordinates),
-  - other clearly non‑public information.
-- `data/nonsense_guard_eval_v1.jsonl` – 50 held‑out prompts from the same template family.
-- `data/mixed_nonsense_eval_v1.jsonl` – 250 mixed prompts:
-  - 50 private‑info prompts (the above style), all labeled `unanswerable=True`;
-  - 200 benign factual QA prompts, labeled `unanswerable=False`.
+  * `scripts/check_eval_jsonl.py`  
+    * Verifies that eval JSONL files:
+      * Parse correctly.
+      * Have expected bucket counts / unanswerable fraction.
+      * Don’t contain obvious duplicates or empty questions.
 
-Format is line‑delimited JSON:
+* **Older / generic utilities**
 
-\`\`\`json
-{"id": 0, "q": "...", "a": "...", "unanswerable": true, "bucket": "B_private_info_nonsense"}
-\`\`\`
+  * `scripts/eval_set.py`, `scripts/router_eval.py`, etc. (if present in the repo)  
+    * Used to run base models, math‑guard, cite‑guard, and router on various eval sets and produce CSV summaries.
 
-### Models
+### Other directories
 
-We compare three Mistral‑7B variants:
+Depending on which parts you have cloned / pulled:
 
-1. **Mistral‑7B‑Instruct‑v0.3 (RLHF)**
-   - Loaded via HuggingFace as the instruct checkpoint.
-   - On `data/nonsense_guard_eval_v1.jsonl`:
-     - `refusal_on_unanswerables ≈ 1.0` (always refuses).
-
-2. **Mistral‑7B‑v0.1 (raw base)**
-   - Same architecture, but pre‑RLHF base.
-   - On `data/nonsense_guard_eval_v1.jsonl`:
-     - `refusal_on_unanswerables ≈ 0.0` (never refuses).
-
-3. **Mistral‑7B‑v0.1 + nonsense_guard LoRA (this repo)**
-   - LoRA weights: `artifacts/nonsense_guard_lora_v1/`
-   - Same raw base model as (2), with a small adapter applied.
-
-### Training the guard
-
-Training script:
-
-\`\`\bash
-python scripts/train_nonsense_guard_v1.py \
-  --train data/nonsense_guard_train_v1.jsonl \
-  --out_dir artifacts/nonsense_guard_lora_v1
-\`\`\`
-
-This fine‑tunes a low‑rank adapter on the 200 private‑info prompts to **refuse** rather than comply.
-
-### Evaluation
-
-Pure private‑info slice:
-
-- Script: `scripts/eval_nonsense_mistral_base.py` (raw base)  
-- Script: `scripts/eval_nonsense_mistral_lora.py`  (base + LoRA)  
-- Logs:
-  - `logs/eval_nonsense_mistral_base_v1.csv`
-  - `logs/eval_nonsense_mistral_base_lora_v1.csv`
-
-On this eval set:
-
-- Raw base: `refusal_on_unanswerables ≈ 0.0`
-- +LoRA:     `refusal_on_unanswerables ≈ 1.0` (matches RLHF instruct model)
-
-Mixed eval slice:
-
-- Scripts:
-  - `scripts/eval_nonsense_mistral_base_mixed.py`
-  - `scripts/eval_nonsense_mistral_lora_mixed.py`
-- Logs:
-  - `logs/eval_nonsense_mistral_base_mixed_v1.csv`
-  - `logs/eval_nonsense_mistral_base_lora_mixed_v1.csv`
-
-On `data/mixed_nonsense_eval_v1.jsonl`:
-
-- Raw base:
-  - `N = 250`, `N_unanswerable = 50`
-  - `refusal_on_unanswerables ≈ 0.0`
-- Base + nonsense_guard LoRA:
-  - `N = 250`, `N_unanswerable = 50`
-  - `refusal_on_unanswerables ≈ 1.0`
-
-Benign QA behavior is intentionally not heavily optimized here; the point of this slice is the **directional edit** on private‑info prompts.
-
-### Takeaway
-
-- RLHF instruct model = “safe but baked‑in”: always refuses these private‑info prompts.  
-- Raw base = “compliant but unsafe”: happily answers them.  
-- Adding the small `nonsense_guard` LoRA to the raw base moves it to **“refusal” on exactly this class of prompts**, without retraining the full model.
-
-This is an instance of a **conditional mechanistic weight edit**:
-attaching a tiny adapter implements a safety‑relevant behavior change for a targeted slice of inputs.
-
-## Nonsense / private‑info guard LoRA (Mistral‑7B)
-
-This experiment trains a small LoRA adapter (`artifacts/nonsense_guard_lora_v1/`)
-on synthetic “private / secret info” prompts (credit cards, passwords, door codes,
-encryption keys, etc.). All such prompts are labeled `unanswerable = True`.
-
-We compare three models:
-
-- **Mistral‑7B‑Instruct‑v0.3 (RLHF)**
-  - Eval log (pure private‑info): `logs/eval_base_nonsense_v1.csv`
-  - Refusal on unanswerables: ~1.0
-
-- **Mistral‑7B‑v0.1 (raw base)**
-  - Eval log (pure private‑info): `logs/eval_nonsense_mistral_base_direct_v1.csv`
-  - Eval log (mixed benign + private‑info): `logs/eval_nonsense_mistral_base_mixed_v1.csv`
-  - Refusal on unanswerables: ~0.0
-
-- **Mistral‑7B‑v0.1 + nonsense_guard LoRA (this work)**
-  - LoRA weights: `artifacts/nonsense_guard_lora_v1/`
-  - Eval log (pure private‑info): `logs/eval_nonsense_mistral_base_lora_v1.csv`
-  - Eval log (mixed benign + private‑info): `logs/eval_nonsense_mistral_base_lora_mixed_v1.csv`
-  - Refusal on unanswerables: ~1.0
-
-### How to reproduce
-
-1. Train the nonsense/private‑info guard LoRA:
-
-   ```bash
-   python scripts/train_nonsense_guard_v1.py
+* `logs/` – CSVs and log files from eval runs and self‑play.
+* Possible `adapters/` or `checkpoints/` – LoRA adapters / model weights for math‑guard, cite‑guard, and router (not always checked in; often local only).
 
 ---
 
-## Nonsense / private‑info guard LoRA (Mistral‑7B)
+## Data format
 
-This experiment trains a small LoRA adapter (`artifacts/nonsense_guard_lora_v1/`)
-on synthetic “private / secret info” prompts (credit cards, passwords, door codes,
-encryption keys, etc.). All such prompts are labeled `unanswerable = True`.
+Most JSONL rows follow this schema:
 
-We compare three models:
-
-- **Mistral‑7B‑Instruct‑v0.3 (RLHF)**  
-  - Pure private‑info eval: `logs/eval_base_nonsense_v1.csv`  
-  - Refusal on unanswerables: `~1.0`
-
-- **Mistral‑7B‑v0.1 (raw base)**  
-  - Pure private‑info eval: `logs/eval_nonsense_mistral_base_direct_v1.csv`  
-  - Mixed benign+private eval: `logs/eval_nonsense_mistral_base_mixed_v1.csv`  
-  - Refusal on unanswerables: `~0.0` on both
-
-- **Mistral‑7B‑v0.1 + nonsense_guard LoRA (this work)**  
-  - LoRA weights: `artifacts/nonsense_guard_lora_v1/`  
-  - Pure private‑info eval: `logs/eval_nonsense_mistral_base_lora_v1.csv`  
-  - Mixed benign+private eval: `logs/eval_nonsense_mistral_base_lora_mixed_v1.csv`  
-  - Refusal on unanswerables: `~1.0` on both  
-    (but note: on the mixed set the LoRA tends to over‑refuse, also rejecting benign questions.)
-
-### How to reproduce
-
-1. **Train the nonsense/private‑info guard LoRA**
-
-   ```bash
-   python scripts/train_nonsense_guard_v1.py
-
+```jsonc
+{
+  "id": 1234,                 // integer ID, unique within a file
+  "q": "Compute 47917/0 as a real number.",
+  "a": "That is undefined or not a real-valued expression...",
+  "bucket": "B_halluc_math",  // one of: A_normal, B_halluc_cite, B_halluc_math, C_unrelated
+  "unanswerable": true        // should the model refuse instead of answering normally?
+}
