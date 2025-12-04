@@ -51,6 +51,38 @@ $$
 
 where $s$ is a scale (often absorbed into training or exposed as a knob).
 
+### What the LoRA equation means
+
+LoRA updates a model weight matrix by adding a small, low-rank correction instead of modifying the full matrix.  
+The update is written as:
+
+$$
+\Delta W = BA
+$$
+
+Here:
+
+- $W \in \mathbb{R}^{d \times k}$ is the original (frozen) model weight.
+- $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ are the learned LoRA parameters.
+- $r$ is a small rank (e.g., 4–16), much smaller than $d$ or $k$.
+
+At inference time, the model uses an adjusted weight:
+
+$$
+W' = W + s \Delta W = W + sBA
+$$
+
+This means:
+
+- The base weight $W$ stays untouched.
+- LoRA learns only the small factors $A$ and $B$.
+- The term $sBA$ is a lightweight additive correction applied on top of $W$.
+- The scale $s$ controls how strong the correction is.
+
+In plain terms:
+
+> The equation says that LoRA keeps the original weight matrix but adds a small, low-rank update on top of it, allowing the model to change behavior efficiently without altering the full parameter matrix.
+
 ### Conditional application (the “C” in CMWE)
 
 CMWE applies different deltas $\Delta W_k$ depending on detected context $k$:
