@@ -147,7 +147,8 @@ python3 scripts/make_disjoint_holdout_v4.py --help
 ```
 ### Some checks to make sure stuff works(counts, buckets, dedup, overlaps)
 
-```JSON python3 scripts/check_eval_jsonl.py --help
+```PY
+python3 scripts/check_eval_jsonl.py --help
 ```
 ## run on the files you generated (see --help)
 “Live” CMWE (runtime behavior)
