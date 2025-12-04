@@ -274,65 +274,83 @@ PY
 
 ## Repo tour and description (what files do what)
 
-###Data generation / splitting
+### Data generation / splitting
 **scripts/build_mixed_eval_varied_v4.py**
+
 Generates the mixed Varied v4 JSONL (bucketed, labeled, deduped).
 
 **scripts/make_disjoint_holdout_v4.py**
+
 Ensures holdout is disjoint from train (no leakage) by regenerating overlaps.
 
 **scripts/gen_varied_datasets.py**
+
 Convenience runner to generate multiple sizes / seeds.
 
 ### Dataset diagnostics
 **scripts/check_eval_jsonl.py**
+
 Counts, bucket balance, dedup stats, overlap diagnostics, “skeleton” stats.
 
 ### Guard training (LoRA)
 **scripts/train_lora_math_guard.py**
+
 Trains a LoRA that refuses/handles undefined math.
 
 **scripts/train_lora_citation_guard.py**
+
 Trains a LoRA that refuses fabricated citations/IDs/URLs.
 
 **scripts/train_nonsense_guard_v1.py**
+
 Prototype guard for private/secret/disallowed-info prompts.
 
 **scripts/train_constrained_guard_v1.py, scripts/train_constrained_guard_v2.py**
+
 Ablations: train guards that are explicitly constrained to avoid false refusals.
 
 ### Router / detectors
 **scripts/train_hidden_probe.py**
+
 Trains a probe on model hidden states (risk score).
 
 **scripts/train_text_detector_for_cmwe.py**
+
 Trains a text-only detector (baseline router).
 
 **scripts/detector_roc.py**
+
 ROC/AUC diagnostics for router performance.
 
 ### Inference / demos
 **scripts/analog_cmwe.py**
+
 Main “CMWE-style” router + guard toggling demo (prints route/risk).
 
 **scripts/conditional_infer.py, scripts/gated_infer.py**
+
 Batch / thresholded variants.
 
 ### RAG (Retrieval-Augmented Generation, optional complement)
 **scripts/run_cmwe_plus_rag.py**
+
 Routes answerable QA to retrieval; routes traps to CMWE refusal.
 
 **scripts/qa_rag.py, scripts/rag_build.py**
+
 RAG utilities.
 
 ### Evaluation
 **scripts/eval_compare.py**
+
 Base vs CMWE comparison on a dataset.
 
 **scripts/eval_gated.py**
+
 Gated vs always-on vs base tradeoff evaluation.
 
 **scripts/*tradeoff*.py**
+
 Sweeps/plots for false refusal vs correct refusal.
 
 Note: This repo includes multiple iterations (v1/v2/v3) as research history. For current work, prefer v4 generation + disjoint holdout.
