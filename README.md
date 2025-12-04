@@ -20,9 +20,7 @@ The working hypothesis: narrow hallucination modes can be fixed by **localized w
 ## Theoretical concept (with the math)
 Let a base LLM define next-token probabilities:
 
-\[
-p_\theta(x_{t+1}\mid x_{\le t})
-\]
+$p(x_{t+1} \mid x_{\le t})$ for a sequence x.
 
 A mechanistic weight edit changes parameters from \(\theta\) to \(\theta'\), producing
 
