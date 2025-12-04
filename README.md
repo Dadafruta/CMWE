@@ -35,20 +35,21 @@ $$
 
 ### LoRA as a low-rank weight delta
 
-For a target weight matrix \(W \in \mathbb{R}^{d \times k}\), LoRA parameterizes an update:
+For a target weight matrix  
+\(W \in \mathbb{R}^{d \times k}\), LoRA parameterizes an update:
 
 $$
-\Delta W = BA 
-\quad\text{where } 
-B \in \mathbb{R}^{d \times r}, \;
-A \in \mathbb{R}^{r \times k}, \;
-r \ll \min(d,k)
+\Delta W = BA
+\quad\text{where}\quad
+B \in \mathbb{R}^{d \times r},\;
+A \in \mathbb{R}^{r \times k},\;
+r \ll \min(d, k)
 $$
 
 So the effective weight becomes:
 
 $$
-W' = W + s \cdot \Delta W = W + s \cdot BA
+W' = W + s\Delta W = W + s BA
 $$
 
 where \(s\) is a scale.
@@ -59,30 +60,30 @@ where \(s\) is a scale.
 
 CMWE applies different deltas \(\Delta W_k\) depending on detected context \(k\):
 
-- \(k = \text{none}\) → base model only  
-- \(k = \text{cite}\) → citation-guard LoRA  
-- \(k = \text{math}\) → undefined-math-guard LoRA  
+- \(\,k = \text{none}\,\) → base model only  
+- \(\,k = \text{cite}\,\) → citation-guard LoRA  
+- \(\,k = \text{math}\,\) → undefined-math-guard LoRA  
 - extendable: \(\text{private-info}\), \(\text{unsafe-code}\), …
 
 ---
 
 ### Gating / routing
 
-A router produces a risk score \(r \in [0,1]\) and maps it to a gate value \(\alpha\) using a sigmoid:
+A router produces a risk score  
+\(r \in [0,1]\) and maps it to a gate value \(\alpha\) using a sigmoid:
 
 $$
 \alpha = \sigma(\beta (r - c))
 $$
 
-- \(c\): center (when “half-on”)  
+- \(c\): center (half-on point)  
 - \(\beta\): sharpness  
 
-Current runs use mostly binary gating, but the framework supports soft blending:
+Current runs use mostly binary gating, but soft blending is also supported:
 
 $$
 W' = W + \alpha \Delta W_k
 $$
-
 
 ---
 
