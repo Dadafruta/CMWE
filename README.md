@@ -89,7 +89,7 @@ A mixed JSONL benchmark with four buckets:
 - **C_unrelated**: answerable but out-of-domain/noise (should not refuse)
 
 Each row is JSONL with (roughly):
-```json
+```PY
 {"id": 0, "q": "...", "a": "...", "unanswerable": false, "bucket": "A_normal"}
 ```
 
@@ -110,7 +110,7 @@ deterministic seeds in generation
 data/SHA256SUMS.txt for published artifacts
 large artifacts tracked via Git LFS (see .gitattributes)
 **Quickstart** (reproduce the current pipeline)
-```JSON
+```PY
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
@@ -118,7 +118,7 @@ pip install -r requirements.txt
 ```
 If you cloned with LFS artifacts:
 
-```JSON
+```PY
 git lfs install
 git lfs pull
 ```
@@ -126,7 +126,7 @@ git lfs pull
 ### Generate Varied v4 train + holdout
 The generator supports --size, --seed, --mix, --out:
 
-```JSON
+```PY
 python3 scripts/build_mixed_eval_varied_v4.py \
   --size 8000 \
   --seed 13 \
@@ -141,7 +141,7 @@ python3 scripts/build_mixed_eval_varied_v4.py \
 ```
 Make the holdout disjoint from train (recommended)
 Use the disjoint-builder to replace any overlaps by generating new candidates:
-```JSON
+```PY
 python3 scripts/make_disjoint_holdout_v4.py --help
 # then run it with your train/holdout paths (see --help for exact flags)
 ```
@@ -156,7 +156,7 @@ router classifies prompt → chooses adapter name (or none)
 model sets adapter → generates
 logs route + risk + output for analysis
 Conceptually (pseudo-code):
-```JSON
+```PY
 py
 k, r = router.classify(prompt)     # k in {none, cite, math, ...}, r in [0,1]
 alpha = sigmoid(beta*(r-center))
@@ -181,8 +181,7 @@ We focus on the tradeoff between safety and utility. Given dataset rows labeled 
 
 Answer accuracy on answerables (exact/normalized match depending on bucket)
 You can compute quickly:
-bash
-COPY CODE
+```PY
 python3 - <<'PY'
 import json, collections
 from pathlib import Path
@@ -193,57 +192,79 @@ print("N:", len(rows))
 print("buckets:", collections.Counter(r["bucket"] for r in rows))
 print("unanswerable_frac:", sum(r["unanswerable"] for r in rows)/len(rows))
 PY
-Repo tour (what files do what)
-Data generation / splitting
-scripts/build_mixed_eval_varied_v4.py
+```
+
+## Repo tour and description (what files do what)
+
+###Data generation / splitting
+**scripts/build_mixed_eval_varied_v4.py**
 Generates the mixed Varied v4 JSONL (bucketed, labeled, deduped).
-scripts/make_disjoint_holdout_v4.py
+
+**scripts/make_disjoint_holdout_v4.py**
 Ensures holdout is disjoint from train (no leakage) by regenerating overlaps.
-scripts/gen_varied_datasets.py
+
+**scripts/gen_varied_datasets.py**
 Convenience runner to generate multiple sizes / seeds.
-Dataset diagnostics
-scripts/check_eval_jsonl.py
+
+### Dataset diagnostics
+**scripts/check_eval_jsonl.py**
 Counts, bucket balance, dedup stats, overlap diagnostics, “skeleton” stats.
-Guard training (LoRA)
-scripts/train_lora_math_guard.py
+
+### Guard training (LoRA)
+**scripts/train_lora_math_guard.py**
 Trains a LoRA that refuses/handles undefined math.
-scripts/train_lora_citation_guard.py
+
+**scripts/train_lora_citation_guard.py**
 Trains a LoRA that refuses fabricated citations/IDs/URLs.
-scripts/train_nonsense_guard_v1.py
+
+**scripts/train_nonsense_guard_v1.py**
 Prototype guard for private/secret/disallowed-info prompts.
-scripts/train_constrained_guard_v1.py, scripts/train_constrained_guard_v2.py
+
+**scripts/train_constrained_guard_v1.py, scripts/train_constrained_guard_v2.py**
 Ablations: train guards that are explicitly constrained to avoid false refusals.
-Router / detectors
-scripts/train_hidden_probe.py
+
+### Router / detectors
+**scripts/train_hidden_probe.py**
 Trains a probe on model hidden states (risk score).
-scripts/train_text_detector_for_cmwe.py
+
+**scripts/train_text_detector_for_cmwe.py**
 Trains a text-only detector (baseline router).
-scripts/detector_roc.py
+
+**scripts/detector_roc.py**
 ROC/AUC diagnostics for router performance.
-Inference / demos
-scripts/analog_cmwe.py
+
+### Inference / demos
+**scripts/analog_cmwe.py**
 Main “CMWE-style” router + guard toggling demo (prints route/risk).
-scripts/conditional_infer.py, scripts/gated_infer.py
+
+**scripts/conditional_infer.py, scripts/gated_infer.py**
 Batch / thresholded variants.
-RAG (optional complement)
-scripts/run_cmwe_plus_rag.py
+
+### RAG (Retrieval-Augmented Generation, optional complement)
+**scripts/run_cmwe_plus_rag.py**
 Routes answerable QA to retrieval; routes traps to CMWE refusal.
-scripts/qa_rag.py, scripts/rag_build.py
+
+**scripts/qa_rag.py, scripts/rag_build.py**
 RAG utilities.
-Evaluation
-scripts/eval_compare.py
+
+### Evaluation
+**scripts/eval_compare.py**
 Base vs CMWE comparison on a dataset.
-scripts/eval_gated.py
+
+**scripts/eval_gated.py**
 Gated vs always-on vs base tradeoff evaluation.
-scripts/*tradeoff*.py
+
+**scripts/*tradeoff*.py**
 Sweeps/plots for false refusal vs correct refusal.
+
 Note: This repo includes multiple iterations (v1/v2/v3) as research history. For current work, prefer v4 generation + disjoint holdout.
 Git LFS + data policy
 Some training/self-play artifacts are large and stored with Git LFS.
 If you’re missing big JSONL files after cloning, run:
-bash
-COPY CODE
+
+```PY
 git lfs install
 git lfs pull
+```
 Checksums for published artifacts live in:
 data/SHA256SUMS.txt
