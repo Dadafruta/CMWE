@@ -1,1 +1,3 @@
-At its core, an LLM defines a probability distribution over the next token given the context: At its core, an LLM defines a probability distribution over the next token given the context: $p(x_{t+1} \mid x_{\le t})$ for a sequence x.
+At its core, an LLM defines a probability distribution over the next token given the context: At its core, an LLM defines a probability distribution over the next token given the context: $$
+p(x_{t+1} \mid x_{\le t})
+$$ for a sequence x.
