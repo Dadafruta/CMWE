@@ -91,39 +91,42 @@ A mixed JSONL benchmark with four buckets:
 Each row is JSONL with (roughly):
 ```json
 {"id": 0, "q": "...", "a": "...", "unanswerable": false, "bucket": "A_normal"}
-2) A disjoint holdout pipeline (no leakage)
+```
+
+### 2) A disjoint holdout pipeline (no leakage)
 A key milestone: we now generate a holdout set that is disjoint from train under normalization.
 exact overlap: 0
 normalized overlap: 0
 template-family (“skeleton”) overlap: nonzero (expected); used as a diagnostic
 This is critical for arguing generalization beyond memorized prompts.
-3) Guard training + evaluation scaffolding
+### 3) Guard training + evaluation scaffolding
 There are scripts to:
 generate datasets,
 train LoRA guards,
 train detectors/probes,
 evaluate tradeoffs (refusal-on-unanswerables vs false refusals).
-4) Reproducibility hooks
+### 4) Reproducibility hooks
 deterministic seeds in generation
 data/SHA256SUMS.txt for published artifacts
 large artifacts tracked via Git LFS (see .gitattributes)
-Quickstart (reproduce the current pipeline)
-Environment
-bash
-COPY CODE
+**Quickstart** (reproduce the current pipeline)
+```JSON
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
 pip install -r requirements.txt
+```
 If you cloned with LFS artifacts:
-bash
-COPY CODE
+
+```JSON
 git lfs install
 git lfs pull
-Generate Varied v4 train + holdout
+```
+
+### Generate Varied v4 train + holdout
 The generator supports --size, --seed, --mix, --out:
-bash
-COPY CODE
+
+```JSON
 python3 scripts/build_mixed_eval_varied_v4.py \
   --size 8000 \
   --seed 13 \
@@ -135,55 +138,47 @@ python3 scripts/build_mixed_eval_varied_v4.py \
   --seed 99 \
   --mix 0.30,0.25,0.25,0.20 \
   --out data/mixed_eval_varied_v4_holdout.jsonl
+```
 Make the holdout disjoint from train (recommended)
 Use the disjoint-builder to replace any overlaps by generating new candidates:
-bash
-COPY CODE
+```JSON
 python3 scripts/make_disjoint_holdout_v4.py --help
 # then run it with your train/holdout paths (see --help for exact flags)
-Sanity checks (counts, buckets, dedup, overlaps)
-bash
-COPY CODE
-python3 scripts/check_eval_jsonl.py --help
-# run on the files you generated (see --help)
+```
+### Some checks to make sure stuff works(counts, buckets, dedup, overlaps)
+
+```JSON python3 scripts/check_eval_jsonl.py --help
+```
+## run on the files you generated (see --help)
 “Live” CMWE (runtime behavior)
 CMWE’s intended endpoint is a live router + conditional LoRA activation at inference time. A typical flow:
 router classifies prompt → chooses adapter name (or none)
 model sets adapter → generates
 logs route + risk + output for analysis
 Conceptually (pseudo-code):
+```JSON
 py
-COPY CODE
 k, r = router.classify(prompt)     # k in {none, cite, math, ...}, r in [0,1]
 alpha = sigmoid(beta*(r-center))
 adapter = pick_adapter(k, alpha)
 
 model.set_adapter(adapter)          # or off
 out = model.generate(prompt)
-Evaluation: what we report
+```
+### Evaluation: what we report
 We focus on the tradeoff between safety and utility. Given dataset rows labeled by unanswerable:
-Refusal-on-unanswerables
-𝐸
-[
-refused
-∣
-unanswerable
-=
-1
-]
-E[refused∣unanswerable=1]
-(higher is better)
-False refusal rate
-𝐸
-[
-refused
-∣
-unanswerable
-=
-0
-]
-E[refused∣unanswerable=0]
-(lower is better)
+- **Refusal-on-unanswerables**
+
+  $$\mathbb{E}[\text{refused} \mid \text{unanswerable} = 1]$$
+
+  (higher is better)
+
+- **False refusal rate**
+
+  $$\mathbb{E}[\text{refused} \mid \text{unanswerable} = 0]$$
+
+  (lower is better)
+
 Answer accuracy on answerables (exact/normalized match depending on bucket)
 You can compute quickly:
 bash
