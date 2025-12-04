@@ -25,18 +25,15 @@ $$
 p(x_{t+1} \mid x_{\le t})
 $$
 
-A mechanistic weight edit changes parameters from \(\theta\) to \(\theta'\), producing
+A mechanistic weight edit changes parameters from $\theta$ to $\theta'$, producing
 
 $$
 p_{\theta'}(x_{t+1} \mid x_{\le t})
 $$
 
----
-
 ### LoRA as a low-rank weight delta
 
-For a target weight matrix  
-\(W \in \mathbb{R}^{d \times k}\), LoRA parameterizes an update:
+For a target weight matrix $W \in \mathbb{R}^{d \times k}$, LoRA parameterizes an update:
 
 $$
 \Delta W = BA
@@ -46,10 +43,38 @@ A \in \mathbb{R}^{r \times k},\;
 r \ll \min(d, k)
 $$
 
-So the effective weight becomes:
+So the effective weight becomes
 
 $$
-W' = W + s\Delta W = W + s BA
+W' = W + s \Delta W = W + s BA
+$$
+
+where $s$ is a scale (often absorbed into training or exposed as a knob).
+
+### Conditional application (the “C” in CMWE)
+
+CMWE applies different deltas $\Delta W_k$ depending on detected context $k$:
+
+- $k = \text{none}$ → base model only  
+- $k = \text{cite}$ → citation-guard LoRA  
+- $k = \text{math}$ → undefined-math-guard LoRA  
+- extendable: $\text{private-info}$, $\text{unsafe-code}$, …
+
+### Gating / routing
+
+A router produces a risk score $r \in [0,1]$ and maps it to a gate value $\alpha$ using a sigmoid:
+
+$$
+\alpha = \sigma(\beta (r - c))
+$$
+
+- $c$: center (when “half-on”)  
+- $\beta$: sharpness (how hard the gate is)
+
+Current runs use mostly-binary gating (thresholding), but the framework supports soft blending (future work):
+
+$$
+W' = W + \alpha \Delta W_k
 $$
 
 where \(s\) is a scale.
