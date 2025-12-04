@@ -59,10 +59,10 @@ where \(s\) is a scale.
 
 CMWE applies different deltas \(\Delta W_k\) depending on detected context \(k\):
 
-- \(k = \texttt{none}\) → base model only  
-- \(k = \texttt{cite}\) → citation-guard LoRA  
-- \(k = \texttt{math}\) → undefined-math-guard LoRA  
-- extendable: \(\texttt{private-info}\), \(\texttt{unsafe-code}\), …
+- \(k = \text{none}\) → base model only  
+- \(k = \text{cite}\) → citation-guard LoRA  
+- \(k = \text{math}\) → undefined-math-guard LoRA  
+- extendable: \(\text{private-info}\), \(\text{unsafe-code}\), …
 
 ---
 
