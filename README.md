@@ -87,9 +87,9 @@ In plain terms:
 
 CMWE applies different deltas $\Delta W_k$ depending on detected context $k$:
 
-- $k = \text{none}$ → base model only  
-- $k = \text{cite}$ → citation-guard LoRA  
-- $k = \text{math}$ → undefined-math-guard LoRA  
+- $k = \text{none} $ → base model only  
+- $k = \text{cite} $ → citation-guard LoRA  
+- $k = \text{math} $ → undefined-math-guard LoRA  
 - extendable: $\text{private-info}$, $\text{unsafe-code}$, …
 
 ### Gating / routing
