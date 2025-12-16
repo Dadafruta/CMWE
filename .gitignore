@@ -12,3 +12,35 @@ logs/
 env/
 venv/
 runs/
+logs/
+*.log
+*.csv
+*.ckpt
+*.pt
+*.safetensors
+__pycache__/
+.ipynb_checkpoints/
+# runtime / outputs
+logs/
+__pycache__/
+*.pyc
+.cache/
+.DS_Store
+*.tmp
+# runtime / outputs
+logs/
+__pycache__/
+*.pyc
+.cache/
+.DS_Store
+*.tmp
+
+# local/generated bench outputs
+data/daily_bench_v4/
+logs/
+.venv*/
+
+# local/generated bench outputs
+data/daily_bench_v4/
+logs/
+.venv*/
