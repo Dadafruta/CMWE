@@ -6,7 +6,6 @@ __pycache__/
 # Large artifacts
 artifacts/
 logs/
-
 # Local envs
 .venv/
 env/
@@ -15,7 +14,6 @@ runs/
 adapters/**/checkpoint-*/
 .venv_math/
 data/daily_bench_v4/
-
 # editor/backup junk
 *.bak
 *.bak.*
