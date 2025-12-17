@@ -15,3 +15,9 @@ runs/
 adapters/**/checkpoint-*/
 .venv_math/
 data/daily_bench_v4/
+
+# editor/backup junk
+*.bak
+*.bak.*
+*.broken.*
+*~
