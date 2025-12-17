@@ -20,6 +20,7 @@ PROMPTS = [
     "What is the capital of Egypt?",
 ]
 
+
 def generate(model, tok, prompt, max_new_tokens=128):
     device = model.device
     # plain causal LM, no chat template
@@ -29,8 +30,9 @@ def generate(model, tok, prompt, max_new_tokens=128):
     text = tok.decode(out[0], skip_special_tokens=True)
     # strip the prompt prefix for readability
     if text.startswith(prompt):
-        text = text[len(prompt):].lstrip()
+        text = text[len(prompt) :].lstrip()
     return text
+
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -53,6 +55,7 @@ def main():
         print("\n[Base + nonsense_guard LoRA]")
         print(generate(guarded, tok, p))
         print()
+
 
 if __name__ == "__main__":
     main()

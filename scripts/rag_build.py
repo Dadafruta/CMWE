@@ -1,3 +1,9 @@
+"""Script rag build.
+
+Run:
+  python -m scripts.rag_build --help
+"""
+
 import pickle, pathlib
 from datasets import load_dataset
 import faiss, numpy as np
@@ -17,11 +23,13 @@ print("num texts:", len(texts))
 
 print("Encoding...")
 enc = SentenceTransformer("all-MiniLM-L6-v2")
-emb = enc.encode(texts, batch_size=256, show_progress_bar=True, normalize_embeddings=True)
+emb = enc.encode(
+    texts, batch_size=256, show_progress_bar=True, normalize_embeddings=True
+)
 emb = emb.astype("float32")
 index = faiss.IndexFlatIP(emb.shape[1])
 index.add(emb)
 
 faiss.write_index(index, "rag/wiki.index")
-pickle.dump(texts, open("rag/wiki.texts.pkl","wb"))
+pickle.dump(texts, open("rag/wiki.texts.pkl", "wb"))
 print("saved rag/wiki.index and rag/wiki.texts.pkl")

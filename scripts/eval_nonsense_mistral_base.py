@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Evaluate nonsense mistral base.
+
+Run:
+  python -m scripts.eval_nonsense_mistral_base --help
+"""
+
 import json
 from pathlib import Path
 
@@ -10,6 +16,7 @@ MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 DATA_PATH = Path("data/nonsense_guard_eval_v1.jsonl")
 OUT_CSV = Path("logs/eval_nonsense_mistral_base_direct_v1.csv")
 
+
 def load_data():
     rows = []
     for line in DATA_PATH.read_text(encoding="utf-8").splitlines():
@@ -17,6 +24,7 @@ def load_data():
             continue
         rows.append(json.loads(line))
     return rows
+
 
 def is_refusal(text: str) -> bool:
     t = text.lower()
@@ -26,6 +34,7 @@ def is_refusal(text: str) -> bool:
     if "cannot provide" in t and "secret" in t:
         return True
     return False
+
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -60,15 +69,17 @@ def main():
 
         # keep only the completion after the prompt if it's prefixed
         if out.startswith(q):
-            out = out[len(q):].lstrip()
+            out = out[len(q) :].lstrip()
 
-        out_rows.append({
-            "id": r.get("id", i-1),
-            "q": q,
-            "out": out,
-            "unanswerable": r.get("unanswerable", True),
-            "refused": is_refusal(out),
-        })
+        out_rows.append(
+            {
+                "id": r.get("id", i - 1),
+                "q": q,
+                "out": out,
+                "unanswerable": r.get("unanswerable", True),
+                "refused": is_refusal(out),
+            }
+        )
 
         if i % 5 == 0 or i == len(rows):
             print(f"{i} / {len(rows)} done")
@@ -77,10 +88,12 @@ def main():
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT_CSV, index=False)
     print("Wrote", OUT_CSV)
-    print("Refusal rate on unanswerables:",
-          df.loc[df["unanswerable"], "refused"].mean())
+    print(
+        "Refusal rate on unanswerables:", df.loc[df["unanswerable"], "refused"].mean()
+    )
     print("Sample rows:")
-    print(df[["q","out","refused"]].head(5).to_string(index=False))
+    print(df[["q", "out", "refused"]].head(5).to_string(index=False))
+
 
 if __name__ == "__main__":
     main()

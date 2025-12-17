@@ -1,3 +1,9 @@
+"""Evaluate constrained guard lora mixed v1.
+
+Run:
+  python -m scripts.eval_constrained_guard_lora_mixed_v1 --help
+"""
+
 import json
 import csv
 from pathlib import Path
@@ -7,12 +13,13 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 
 BASE_MODEL = "mistralai/Mistral-7B-v0.1"
-LORA_DIR   = "artifacts/constrained_guard_lora_v2"
+LORA_DIR = "artifacts/constrained_guard_lora_v2"
 
 DATA_PATH = Path("data/mixed_eval_v1.jsonl")
-OUT_CSV   = Path("logs/eval_constrained_guard_lora_mixed_v1.csv")
+OUT_CSV = Path("logs/eval_constrained_guard_lora_mixed_v1.csv")
 
 REFUSAL_PHRASE = "I cannot provide this kind of information"
+
 
 def extract_prompt(row):
     """Try a few common keys for the question text."""
@@ -21,6 +28,7 @@ def extract_prompt(row):
             return row[k]
     raise KeyError(f"No prompt-like key found in row: {list(row.keys())}")
 
+
 def is_unanswerable(row):
     """Map row metadata to a boolean 'unanswerable' flag."""
     if "unanswerable" in row:
@@ -28,6 +36,7 @@ def is_unanswerable(row):
     if "is_benign" in row:
         return not bool(row["is_benign"])
     return False
+
 
 def load_model():
     bnb = BitsAndBytesConfig(
@@ -55,6 +64,7 @@ def load_model():
 
     return model, tok
 
+
 def generate(model, tok, prompt, max_new_tokens=128):
     enc = tok(prompt, return_tensors="pt").to(model.device)
     with torch.no_grad():
@@ -64,6 +74,7 @@ def generate(model, tok, prompt, max_new_tokens=128):
             do_sample=False,
         )
     return tok.decode(out[0], skip_special_tokens=True)
+
 
 def main():
     print("Loading eval data from", DATA_PATH)
@@ -126,6 +137,7 @@ def main():
     print("N answerable:", n_ans)
     print("refusal_on_unanswerables:", round(rate(n_ref_on_unans, n_unans), 3))
     print("false_refusal_on_answerables:", round(rate(n_ref_on_ans, n_ans), 3))
+
 
 if __name__ == "__main__":
     main()

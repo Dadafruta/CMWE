@@ -1,16 +1,25 @@
+"""Script constrained guard tradeoff.
+
+Run:
+  python -m scripts.constrained_guard_tradeoff --help
+"""
+
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 
 LOG_DIR = Path("logs")
 
+
 def summarize(csv_path, label: str):
     df = pd.read_csv(csv_path)
     if "refused" not in df.columns or "unanswerable" not in df.columns:
-        raise SystemExit(f"{csv_path} is missing required columns. Found: {list(df.columns)}")
+        raise SystemExit(
+            f"{csv_path} is missing required columns. Found: {list(df.columns)}"
+        )
 
     A = df[df["unanswerable"] == False]  # answerable / benign
-    U = df[df["unanswerable"] == True]   # unanswerable / private-info
+    U = df[df["unanswerable"] == True]  # unanswerable / private-info
 
     N = len(df)
     N_ans = len(A)
@@ -28,11 +37,18 @@ def summarize(csv_path, label: str):
         false_refusal_on_answerables=false_refusal_on_answerables,
     )
 
+
 def main():
     configs = [
-        ("base_on_mixed",               LOG_DIR / "eval_nonsense_mistral_base_mixed_v1.csv"),
-        ("max_guard_lora_on_mixed",     LOG_DIR / "eval_nonsense_mistral_base_lora_mixed_v1.csv"),
-        ("constrained_guard_lora_mixed",LOG_DIR / "eval_constrained_guard_lora_mixed_v1.csv"),
+        ("base_on_mixed", LOG_DIR / "eval_nonsense_mistral_base_mixed_v1.csv"),
+        (
+            "max_guard_lora_on_mixed",
+            LOG_DIR / "eval_nonsense_mistral_base_lora_mixed_v1.csv",
+        ),
+        (
+            "constrained_guard_lora_mixed",
+            LOG_DIR / "eval_constrained_guard_lora_mixed_v1.csv",
+        ),
     ]
 
     rows = []
@@ -48,11 +64,15 @@ def main():
     fig_path = LOG_DIR / "constrained_guard_tradeoff.png"
     plt.figure()
     for row in rows:
-        plt.scatter(row["false_refusal_on_answerables"],
-                    row["refusal_on_unanswerables"])
-        plt.text(row["false_refusal_on_answerables"] + 0.01,
-                 row["refusal_on_unanswerables"] + 0.01,
-                 row["model"], fontsize=8)
+        plt.scatter(
+            row["false_refusal_on_answerables"], row["refusal_on_unanswerables"]
+        )
+        plt.text(
+            row["false_refusal_on_answerables"] + 0.01,
+            row["refusal_on_unanswerables"] + 0.01,
+            row["model"],
+            fontsize=8,
+        )
     plt.xlabel("False refusal rate on answerables")
     plt.ylabel("Refusal rate on unanswerables")
     plt.xlim(-0.05, 1.05)
@@ -63,6 +83,7 @@ def main():
     plt.savefig(fig_path, dpi=200)
 
     print({"points_csv": str(points_csv), "figure": str(fig_path)})
+
 
 if __name__ == "__main__":
     main()

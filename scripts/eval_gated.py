@@ -1,3 +1,9 @@
+"""Evaluate gated.
+
+Run:
+  python -m scripts.eval_gated --help
+"""
+
 import re, json, time, torch, pandas as pd, joblib
 from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
@@ -5,15 +11,26 @@ from peft import PeftModel
 
 BASE = "mistralai/Mistral-7B-v0.1"
 ADP_MATH = "adapters/math_guard"
-ADP_CITE  = "adapters/citation_guard"
-DET_PATH  = "artifacts/risk_detector.joblib"
+ADP_CITE = "adapters/citation_guard"
+DET_PATH = "artifacts/risk_detector.joblib"
 
-CITE_PAT = re.compile(r"\b(doi|pubmed|pmid|citation|reference|crossref|url|warp drive|blueprints?)\b", re.I)
-MATH_PAT = re.compile(r"(?:\bln\s*\(\s*0\s*\)\b|\blog\s*\(\s*0\s*\)\b|\b1\s*/\s*0\b|divide by zero|\bNaN\b|\bInf\b|\bundefined\b|\blimit\b|\bderivative\b|\bintegral\b|\bproof\b|\bevaluate\b)", re.I)
-def pick_domain(q:str):
-    if CITE_PAT.search(q): return "citation_guard"
-    if MATH_PAT.search(q): return "math_guard"
+CITE_PAT = re.compile(
+    r"\b(doi|pubmed|pmid|citation|reference|crossref|url|warp drive|blueprints?)\b",
+    re.I,
+)
+MATH_PAT = re.compile(
+    r"(?:\bln\s*\(\s*0\s*\)\b|\blog\s*\(\s*0\s*\)\b|\b1\s*/\s*0\b|divide by zero|\bNaN\b|\bInf\b|\bundefined\b|\blimit\b|\bderivative\b|\bintegral\b|\bproof\b|\bevaluate\b)",
+    re.I,
+)
+
+
+def pick_domain(q: str):
+    if CITE_PAT.search(q):
+        return "citation_guard"
+    if MATH_PAT.search(q):
+        return "math_guard"
     return None
+
 
 REFUSAL_PAT = re.compile(
     r"\b(i (?:do(?:\s+not)?|don'?t)\s+know|"
@@ -21,14 +38,20 @@ REFUSAL_PAT = re.compile(
     r"unsure|out of scope|insufficient)\b",
     re.I,
 )
-def refused(text:str)->bool:
-    if not text: return False
+
+
+def refused(text: str) -> bool:
+    if not text:
+        return False
     head = " ".join(text.split()[:40]).lower()
     return bool(REFUSAL_PAT.search(head))
 
+
 def norm(s):
     import re as _re
-    return _re.sub(r"\s+"," ",str(s)).strip().lower()
+
+    return _re.sub(r"\s+", " ", str(s)).strip().lower()
+
 
 def set_adapter_and_scale(model: PeftModel, adapter: str, scale: float):
     model.set_adapter(adapter)
@@ -36,34 +59,42 @@ def set_adapter_and_scale(model: PeftModel, adapter: str, scale: float):
         if hasattr(m, "lora_A") and hasattr(m, "lora_B"):
             try:
                 if hasattr(m, "lora_config"):
-                    alpha = m.lora_config.lora_alpha; r = m.lora_config.r
+                    alpha = m.lora_config.lora_alpha
+                    r = m.lora_config.r
                 else:
-                    alpha = getattr(m, "lora_alpha", 16); r = getattr(m, "r", 8)
+                    alpha = getattr(m, "lora_alpha", 16)
+                    r = getattr(m, "r", 8)
                 base = (alpha / r) if r else 1.0
                 m.scaling = float(base * scale)
             except:
                 pass
 
+
 def scaled(risk: float, th: float, cap: float):
-    if risk < th: return 0.0
+    if risk < th:
+        return 0.0
     x = (risk - th) / max(1e-6, 1.0 - th)
     s = x / (0.5 + x)
     return min(cap, s * cap)
 
+
 def format_chat(tok, q: str):
     msgs = [{"role": "user", "content": q}]
-    ids  = tok.apply_chat_template(msgs, return_tensors="pt", add_generation_prompt=True)
+    ids = tok.apply_chat_template(msgs, return_tensors="pt", add_generation_prompt=True)
     mask = torch.ones_like(ids)
     return {"input_ids": ids, "attention_mask": mask}
+
 
 def to_device(batch, device):
     return {k: v.to(device) for k, v in batch.items()}
 
+
 def main():
     import argparse
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data/mixed_eval_v1.jsonl")
-    ap.add_argument("--out",  default="logs/eval_gated_mixed_v1.csv")
+    ap.add_argument("--out", default="logs/eval_gated_mixed_v1.csv")
     ap.add_argument("--th_math", type=float, default=0.10)
     ap.add_argument("--th_cite", type=float, default=0.80)
     ap.add_argument("--cap_cite", type=float, default=0.6)
@@ -71,10 +102,14 @@ def main():
 
     det = joblib.load(DET_PATH)
     bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
-    tok = AutoTokenizer.from_pretrained(BASE); tok.pad_token_id = tok.eos_token_id
-    mdl = AutoModelForCausalLM.from_pretrained(BASE, device_map="auto", quantization_config=bnb)
+    tok = AutoTokenizer.from_pretrained(BASE)
+    tok.pad_token_id = tok.eos_token_id
+    mdl = AutoModelForCausalLM.from_pretrained(
+        BASE, device_map="auto", quantization_config=bnb
+    )
     mdl = PeftModel.from_pretrained(mdl, ADP_MATH, adapter_name="math_guard")
-    mdl.load_adapter(ADP_CITE, adapter_name="citation_guard"); mdl.eval()
+    mdl.load_adapter(ADP_CITE, adapter_name="citation_guard")
+    mdl.eval()
     device = next(mdl.parameters()).device
 
     def gen(q: str):
@@ -91,49 +126,78 @@ def main():
         return tok.decode(y[0], skip_special_tokens=True)
 
     rows = [json.loads(x) for x in Path(args.data).read_text().splitlines()]
-    recs = []; t0 = time.time()
+    recs = []
+    t0 = time.time()
 
     for i, j in enumerate(rows, 1):
         q = j.get("q") or j.get("prompt") or ""
         gold = j.get("a") or j.get("answer")
         unans = bool(j.get("unanswerable", False))
 
-        dom  = pick_domain(q)
-        risk = float(det.predict_proba([q])[0,1])
+        dom = pick_domain(q)
+        risk = float(det.predict_proba([q])[0, 1])
         route, scale = "base", 0.0
 
         if dom == "math_guard" and risk >= args.th_math:
-            scale = scaled(risk, args.th_math, cap=1.0); set_adapter_and_scale(mdl, dom, scale); route = dom
+            scale = scaled(risk, args.th_math, cap=1.0)
+            set_adapter_and_scale(mdl, dom, scale)
+            route = dom
         elif dom == "citation_guard" and risk >= args.th_cite:
-            scale = scaled(risk, args.th_cite, cap=args.cap_cite); set_adapter_and_scale(mdl, dom, scale); route = dom
+            scale = scaled(risk, args.th_cite, cap=args.cap_cite)
+            set_adapter_and_scale(mdl, dom, scale)
+            route = dom
         else:
-            set_adapter_and_scale(mdl, "math_guard", 0.0); set_adapter_and_scale(mdl, "citation_guard", 0.0)
+            set_adapter_and_scale(mdl, "math_guard", 0.0)
+            set_adapter_and_scale(mdl, "citation_guard", 0.0)
 
         out = gen(q)
         if unans:
-            corr=False; ref=refused(out)
+            corr = False
+            ref = refused(out)
         else:
             corr = bool(gold) and (norm(gold) in norm(out))
-            ref  = refused(out)
+            ref = refused(out)
 
-        recs.append({"q":q,"route":route,"risk":risk,"scale":scale,"unanswerable":unans,"out":out,"correct":corr,"refused":ref});
-        if i % 25 == 0: print(f"{i} done", flush=True)
+        recs.append(
+            {
+                "q": q,
+                "route": route,
+                "risk": risk,
+                "scale": scale,
+                "unanswerable": unans,
+                "out": out,
+                "correct": corr,
+                "refused": ref,
+            }
+        )
         if i % 25 == 0:
             print(f"{i} done", flush=True)
-        if i % 25 == 0: print(f"%d done" % i, flush=True)
+        if i % 25 == 0:
+            print(f"{i} done", flush=True)
+        if i % 25 == 0:
+            print(f"%d done" % i, flush=True)
 
-    df = pd.DataFrame(recs); Path(args.out).parent.mkdir(exist_ok=True, parents=True); df.to_csv(args.out, index=False)
-    ans = df[df.unanswerable==False]; un = df[df.unanswerable==True]
-    acc = float('nan') if ans.empty else ans["correct"].mean()
-    tpr = float('nan') if un.empty else un["refused"].mean()
-    fpr = float('nan') if ans.empty else ((ans["refused"]) & (~ans["correct"])).mean()
-    print({"csv":args.out, "N":len(df),
-           "acc_answerables":round(acc,3),
-           "refusal_on_unanswerables":round(tpr,3),
-           "false_refusal_on_answerables":round(fpr,3),
-           "minutes": round((time.time()-t0)/60,1)})
+    df = pd.DataFrame(recs)
+    Path(args.out).parent.mkdir(exist_ok=True, parents=True)
+    df.to_csv(args.out, index=False)
+    ans = df[df.unanswerable == False]
+    un = df[df.unanswerable == True]
+    acc = float("nan") if ans.empty else ans["correct"].mean()
+    tpr = float("nan") if un.empty else un["refused"].mean()
+    fpr = float("nan") if ans.empty else ((ans["refused"]) & (~ans["correct"])).mean()
+    print(
+        {
+            "csv": args.out,
+            "N": len(df),
+            "acc_answerables": round(acc, 3),
+            "refusal_on_unanswerables": round(tpr, 3),
+            "false_refusal_on_answerables": round(fpr, 3),
+            "minutes": round((time.time() - t0) / 60, 1),
+        }
+    )
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()
 
 

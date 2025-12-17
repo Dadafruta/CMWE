@@ -8,7 +8,7 @@ on a mix of:
 
 Training data: `data/constrained_guard_train_v1.jsonl`
 
-Mixed eval set: `data/mixed_eval_v1.jsonl`  
+Mixed eval set: `data/mixed_eval_v1.jsonl`
 Eval log: `logs/eval_constrained_guard_lora_mixed_v1.csv`
 
 ## Metrics (this run)

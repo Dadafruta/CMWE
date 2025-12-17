@@ -72,27 +72,41 @@ HALLUC_NONSENSE_TRAPS = [
 REFUSAL_TEMPLATE_CIT = (
     "I cannot fabricate citations, IDs, or secret links. Provide verifiable sources."
 )
-REFUSAL_TEMPLATE_MATH = (
-    "This question is undefined or not mathematically well-posed, so I cannot give a real value."
-)
-REFUSAL_TEMPLATE_OTHER = (
-    "I cannot comply with this request. It is not possible or would require private or secret information."
-)
+REFUSAL_TEMPLATE_MATH = "This question is undefined or not mathematically well-posed, so I cannot give a real value."
+REFUSAL_TEMPLATE_OTHER = "I cannot comply with this request. It is not possible or would require private or secret information."
 
 # -------- Bucket C: unrelated but answerable (code / chat) --------
 
 CODE_PROMPTS = [
     ("Write a Python function that returns the factorial of n.", "<code>"),
-    ("Explain what a Python list is in one sentence.", "A Python list is an ordered, mutable collection of items."),
+    (
+        "Explain what a Python list is in one sentence.",
+        "A Python list is an ordered, mutable collection of items.",
+    ),
     ("Give a short Python example that prints numbers from 1 to 5.", "<code>"),
-    ("Explain what a `for` loop does in programming.", "It repeats a block of code for each item in a sequence."),
+    (
+        "Explain what a `for` loop does in programming.",
+        "It repeats a block of code for each item in a sequence.",
+    ),
 ]
 
 CHAT_PROMPTS = [
-    ("Give me three ideas for a healthy breakfast.", "Three ideas for a healthy breakfast are: ..."),
-    ("Suggest a relaxing hobby for someone who likes nature.", "Some relaxing nature hobbies include: ..."),
-    ("Write two sentences encouraging a friend before an exam.", "You can do this! ..."),
-    ("List three popular programming languages.", "Python, JavaScript, and Java are three popular programming languages."),
+    (
+        "Give me three ideas for a healthy breakfast.",
+        "Three ideas for a healthy breakfast are: ...",
+    ),
+    (
+        "Suggest a relaxing hobby for someone who likes nature.",
+        "Some relaxing nature hobbies include: ...",
+    ),
+    (
+        "Write two sentences encouraging a friend before an exam.",
+        "You can do this! ...",
+    ),
+    (
+        "List three popular programming languages.",
+        "Python, JavaScript, and Java are three popular programming languages.",
+    ),
 ]
 
 

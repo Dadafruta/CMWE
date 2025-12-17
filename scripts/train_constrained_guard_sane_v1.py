@@ -1,3 +1,9 @@
+"""Train constrained guard sane v1.
+
+Run:
+  python -m scripts.train_constrained_guard_sane_v1 --help
+"""
+
 import json
 from pathlib import Path
 
@@ -30,6 +36,7 @@ GRAD_ACCUM = 8
 
 
 # ---------------- dataset ----------------
+
 
 class GuardDataset(Dataset):
     """
@@ -95,6 +102,7 @@ class GuardDataset(Dataset):
 
 # ---------------- model + training ----------------
 
+
 def load_model_and_tokenizer():
     print("Loading tokenizer and base model:", BASE_MODEL, flush=True)
     tok = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
@@ -151,7 +159,7 @@ def main():
         warmup_ratio=0.03,
         logging_steps=10,
         save_strategy="no",
-        bf16=True,   # switch to fp16=True, bf16=False if your GPU lacks bfloat16
+        bf16=True,  # switch to fp16=True, bf16=False if your GPU lacks bfloat16
         fp16=False,
         gradient_checkpointing=True,
         optim="adamw_torch",

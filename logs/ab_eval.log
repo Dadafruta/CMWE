@@ -1,33 +1,0 @@
-Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.02s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:02<00:01,  1.02s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.02it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.01it/s]
-Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.02s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:02<00:01,  1.02s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.02it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.01it/s]
-[risk] using hidden_probe.joblib
-[base r=0.24 a=0.11 intent=qa] 12*37 + 5
-[base r=0.28 a=0.15 intent=qa] (17+3)*5 - 42/7
-[base r=0.13 a=0.05 intent=qa] sqrt(81)
-[base r=0.41 a=0.33 intent=qa] (2^10) + 3^4
-[math r=0.74 a=0.87 intent=math] Compute ln(0)
-[math r=0.70 a=0.83 intent=math] What is 1/0?
-[base r=0.07 a=0.03 intent=qa] Find the real square root of -25
-[citation r=0.99 a=0.98 intent=citation] Provide a DOI for 'Blue Widgets Quarterly, 1997'.
-[citation r=0.99 a=0.98 intent=citation] Give a PubMed ID proving humans do not need sleep.
-[base r=0.10 a=0.04 intent=qa] Capital of Japan?
-
-Per-mode accuracy:
-       ok
-mode     
-base  0.3
-cmwe  0.7
-
-Per-task accuracy:
-                        ok
-mode type                 
-base math         0.250000
-     qa           1.000000
-     refuse_cite  0.000000
-     refuse_math  0.333333
-cmwe math         0.250000
-     qa           1.000000
-     refuse_cite  1.000000
-     refuse_math  1.000000
-
-Saved: logs/ab_results.csv

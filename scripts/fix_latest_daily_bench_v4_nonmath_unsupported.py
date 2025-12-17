@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Fix latest daily bench v4 nonmath unsupported.
+
+Run:
+  python -m scripts.fix_latest_daily_bench_v4_nonmath_unsupported --help
+"""
+
 import argparse
 import hashlib
 import json
@@ -39,7 +45,12 @@ def load_unique_qs_jsonl(path: Path) -> list[str]:
             except Exception as e:
                 raise SystemExit(f"{path}:{i} invalid json: {e}")
 
-            q = obj.get("q") or obj.get("question") or obj.get("prompt") or obj.get("input")
+            q = (
+                obj.get("q")
+                or obj.get("question")
+                or obj.get("prompt")
+                or obj.get("input")
+            )
             if not q:
                 raise SystemExit(f"{path}:{i} missing q/question/prompt/input")
 
@@ -70,17 +81,25 @@ def write_bench_jsonl(path: Path, qs: list[str], gold: str) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bench_dir", default="data/daily_bench_v4")
-    ap.add_argument("--run_dir", default="", help="If empty, patches newest run dir under --bench_dir")
+    ap.add_argument(
+        "--run_dir",
+        default="",
+        help="If empty, patches newest run dir under --bench_dir",
+    )
     ap.add_argument("--nonmath_src", default="data/daily_v1_nonmath.jsonl")
     ap.add_argument("--unsupported_src", default="data/daily_v1_unsupported.jsonl")
     ap.add_argument("--n_nonmath", type=int, default=50_000)
     ap.add_argument("--n_unsupported", type=int, default=20_000)
-    ap.add_argument("--seed", type=int, default=-1, help="If <0, uses stable seed from run dir name")
+    ap.add_argument(
+        "--seed", type=int, default=-1, help="If <0, uses stable seed from run dir name"
+    )
     args = ap.parse_args()
 
     root = Path.cwd()
     bench_dir = (root / args.bench_dir).resolve()
-    run_dir = Path(args.run_dir).resolve() if args.run_dir else newest_run_dir(bench_dir)
+    run_dir = (
+        Path(args.run_dir).resolve() if args.run_dir else newest_run_dir(bench_dir)
+    )
 
     nonmath_src = (root / args.nonmath_src).resolve()
     unsupported_src = (root / args.unsupported_src).resolve()
@@ -89,7 +108,9 @@ def main() -> None:
     unsupported_qs = load_unique_qs_jsonl(unsupported_src)
 
     if args.n_nonmath > len(nonmath_qs):
-        raise SystemExit(f"Need n_nonmath={args.n_nonmath} but only have {len(nonmath_qs)} unique in {nonmath_src}")
+        raise SystemExit(
+            f"Need n_nonmath={args.n_nonmath} but only have {len(nonmath_qs)} unique in {nonmath_src}"
+        )
     if args.n_unsupported > len(unsupported_qs):
         raise SystemExit(
             f"Need n_unsupported={args.n_unsupported} but only have {len(unsupported_qs)} unique in {unsupported_src}"
@@ -117,7 +138,9 @@ def main() -> None:
 
     print(f"RUN_DIR={run_dir}")
     print(f"OK nonmath.jsonl: rows={len(new_nonmath)} unique={len(set(new_nonmath))}")
-    print(f"OK unsupported.jsonl: rows={len(new_unsupported)} unique={len(set(new_unsupported))}")
+    print(
+        f"OK unsupported.jsonl: rows={len(new_unsupported)} unique={len(set(new_unsupported))}"
+    )
 
 
 if __name__ == "__main__":

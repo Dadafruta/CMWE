@@ -1,3 +1,9 @@
+"""Train constrained guard v1.
+
+Run:
+  python -m scripts.train_constrained_guard_v1 --help
+"""
+
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,11 +22,11 @@ from transformers import (
 from peft import LoraConfig, get_peft_model
 
 
-BASE_MODEL = "mistralai/Mistral-7B-v0.1"   # or whatever you're using
+BASE_MODEL = "mistralai/Mistral-7B-v0.1"  # or whatever you're using
 LORA_RANK = 8
 LORA_ALPHA = 16
 LORA_DROPOUT = 0.1
-LAMBDA_KL = 0.5                           # strength of "stay close to base" penalty
+LAMBDA_KL = 0.5  # strength of "stay close to base" penalty
 
 
 # ----- Simple JSONL dataset loader -------------------------------------------------
@@ -59,7 +65,11 @@ class JsonlLMDataset(Dataset):
         input_ids = enc["input_ids"][0]
         attn_mask = enc["attention_mask"][0]
 
-        return {"input_ids": input_ids, "attention_mask": attn_mask, "labels": input_ids.clone()}
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attn_mask,
+            "labels": input_ids.clone(),
+        }
 
 
 # ----- Custom Trainer with KL term on benign examples ------------------------------
@@ -92,7 +102,9 @@ class ConstrainedGuardTrainer(Trainer):
         for p in self.base_model.parameters():
             p.requires_grad_(False)
 
-    def compute_loss(self, model, inputs, num_items_in_batch=None, return_outputs=False):
+    def compute_loss(
+        self, model, inputs, num_items_in_batch=None, return_outputs=False
+    ):
         # inputs must contain a boolean 'is_benign' flag in the batch
         is_benign = inputs.pop("is_benign")
         labels = inputs["labels"]
@@ -103,8 +115,9 @@ class ConstrainedGuardTrainer(Trainer):
 
         shift_logits = logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
-        ce_loss = ce_loss_fct(shift_logits.view(-1, shift_logits.size(-1)),
-                              shift_labels.view(-1))
+        ce_loss = ce_loss_fct(
+            shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)
+        )
 
         if not is_benign.any():
             loss = ce_loss
@@ -145,7 +158,9 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
 
     # load base + LoRA
-    base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=torch.bfloat16)
+    base_model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL, torch_dtype=torch.bfloat16
+    )
     lora_cfg = LoraConfig(
         r=LORA_RANK,
         lora_alpha=LORA_ALPHA,
@@ -186,7 +201,9 @@ def main():
         for x in batch:
             pad_len = max_len - len(x["input_ids"])
             input_ids.append(
-                torch.cat([x["input_ids"], torch.full((pad_len,), tokenizer.pad_token_id)])
+                torch.cat(
+                    [x["input_ids"], torch.full((pad_len,), tokenizer.pad_token_id)]
+                )
             )
             attn.append(torch.cat([x["attention_mask"], torch.zeros(pad_len)]))
             # labels: pad with -100 (ignored)
@@ -196,7 +213,7 @@ def main():
             "input_ids": torch.stack(input_ids),
             "attention_mask": torch.stack(attn),
             "labels": torch.stack(labels),
-        "is_benign": torch.tensor(benign_flags, dtype=torch.float32),
+            "is_benign": torch.tensor(benign_flags, dtype=torch.float32),
         }
 
     training_args = TrainingArguments(
@@ -224,9 +241,6 @@ def main():
     Path(cfg.output_dir).mkdir(parents=True, exist_ok=True)
     trainer.save_model(cfg.output_dir)
     print(f"Saved constrained guard LoRA to {cfg.output_dir}")
-
-
-
 
 
 # ==== Simplified ConstrainedGuardTrainer overriding previous version ====

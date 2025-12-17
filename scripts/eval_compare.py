@@ -1,3 +1,9 @@
+"""Evaluate compare.
+
+Run:
+  python -m scripts.eval_compare --help
+"""
+
 import re, time, json, math
 from pathlib import Path
 import pandas as pd
@@ -9,7 +15,10 @@ MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
 tok = AutoTokenizer.from_pretrained(MODEL)
 if tok.pad_token is None:
     tok.pad_token = tok.eos_token
-base = AutoModelForCausalLM.from_pretrained(MODEL, device_map="auto", torch_dtype="auto")
+base = AutoModelForCausalLM.from_pretrained(
+    MODEL, device_map="auto", torch_dtype="auto"
+)
+
 
 def gen_base(q, max_new=128):
     prompt = f"Q: {q}\nA:"
@@ -25,12 +34,16 @@ def gen_base(q, max_new=128):
         )
     return tok.decode(y[0], skip_special_tokens=True).split("A:", 1)[-1].strip()
 
+
 def is_refusal(text: str) -> bool:
     t = text.lower()
-    return bool(re.search(
-        r"\b(can.?not|cannot|can.t|won.?t|undefined|not defined|no (?:source|doi|pmid)|cannot fabricate)",
-        t
-    ))
+    return bool(
+        re.search(
+            r"\b(can.?not|cannot|can.t|won.?t|undefined|not defined|no (?:source|doi|pmid)|cannot fabricate)",
+            t,
+        )
+    )
+
 
 def judge(item, pred: str):
     task = item["type"]
@@ -51,6 +64,7 @@ def judge(item, pred: str):
         return int(gold.lower() in pred.lower())
     return 0
 
+
 def run(mode: str, data):
     out = []
     router = CMWE(Cfg()) if mode == "cmwe" else None
@@ -63,8 +77,18 @@ def run(mode: str, data):
             ans = router.answer(q)
         dt = time.time() - t0
         ok = judge(ex, ans)
-        out.append({"mode": mode, "type": ex["type"], "q": q, "ans": ans, "ok": ok, "latency_s": dt})
+        out.append(
+            {
+                "mode": mode,
+                "type": ex["type"],
+                "q": q,
+                "ans": ans,
+                "ok": ok,
+                "latency_s": dt,
+            }
+        )
     return out
+
 
 if __name__ == "__main__":
     data = [json.loads(l) for l in Path("data/bench.jsonl").open()]

@@ -1,49 +1,0 @@
-nohup: ignoring input
-`torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.03s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:02<00:01,  1.03s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.02it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:02<00:00,  1.01it/s]
-The following generation flags are not valid and may be ignored: ['temperature']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
-[math] kept 200/6000 (tried 404) elapsed 290s
-[math] kept 200/6000 (tried 405) elapsed 294s
-[math] kept 400/6000 (tried 1050) elapsed 708s
-[math] kept 600/6000 (tried 1639) elapsed 1091s
-[math] kept 600/6000 (tried 1644) elapsed 1092s
-[math] kept 800/6000 (tried 2263) elapsed 1448s
-[math] kept 800/6000 (tried 2264) elapsed 1448s
-[math] kept 1000/6000 (tried 2875) elapsed 1871s
-[math] kept 1000/6000 (tried 2876) elapsed 1872s
-[math] kept 1200/6000 (tried 3486) elapsed 2257s
-[math] kept 1400/6000 (tried 4123) elapsed 2650s
-[math] kept 1600/6000 (tried 4724) elapsed 3010s
-[math] kept 1800/6000 (tried 5376) elapsed 3453s
-[math] kept 2000/6000 (tried 5956) elapsed 3841s
-[math] kept 2200/6000 (tried 6523) elapsed 4194s
-[math] kept 2200/6000 (tried 6524) elapsed 4194s
-[math] kept 2400/6000 (tried 7138) elapsed 4613s
-[math] kept 2600/6000 (tried 7806) elapsed 4969s
-[math] kept 2800/6000 (tried 8432) elapsed 5313s
-[math] kept 3000/6000 (tried 8983) elapsed 5653s
-[math] kept 3200/6000 (tried 9581) elapsed 6091s
-[math] kept 3400/6000 (tried 10228) elapsed 6503s
-[math] kept 3400/6000 (tried 10230) elapsed 6503s
-[math] kept 3600/6000 (tried 10843) elapsed 6815s
-[math] kept 3800/6000 (tried 11479) elapsed 7223s
-[math] kept 4000/6000 (tried 12107) elapsed 7571s
-[math] kept 4200/6000 (tried 12717) elapsed 7953s
-[math] kept 4400/6000 (tried 13320) elapsed 8303s
-[math] kept 4400/6000 (tried 13322) elapsed 8303s
-[math] kept 4600/6000 (tried 13924) elapsed 8685s
-[math] kept 4600/6000 (tried 13925) elapsed 8689s
-[math] kept 4800/6000 (tried 14580) elapsed 9109s
-[math] kept 5000/6000 (tried 15124) elapsed 9420s
-[math] kept 5200/6000 (tried 15752) elapsed 9778s
-[math] kept 5400/6000 (tried 16314) elapsed 10165s
-[math] kept 5400/6000 (tried 16315) elapsed 10165s
-[math] kept 5400/6000 (tried 16318) elapsed 10165s
-[math] kept 5600/6000 (tried 17033) elapsed 10580s
-[math] kept 5600/6000 (tried 17037) elapsed 10580s
-[math] kept 5600/6000 (tried 17039) elapsed 10584s
-[math] kept 5800/6000 (tried 17659) elapsed 10968s
-[math] kept 5800/6000 (tried 17661) elapsed 10968s
-[math] kept 6000/6000 (tried 18263) elapsed 11324s
-wrote 6000 rows → data/math_refusal_synth.jsonl
-Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:02,  1.01s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:02<00:01,  1.05s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.00it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.01s/it]

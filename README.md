@@ -1,7 +1,7 @@
 # CMWE
 ### Conditional Mechanistic Weight Edits (runtime hallucination reduction)
 
-**TL;DR:** CMWE is a **live, runtime hallucination-reduction system** for open‑weight LLMs.  
+**TL;DR:** CMWE is a **live, runtime hallucination-reduction system** for open‑weight LLMs.
 It **conditionally applies small mechanistic weight edits (LoRA adapters)** *only when a prompt is in a high‑risk slice* (e.g., unverifiable citations, undefined math), so the model refuses or answers safely **without globally “over-aligning”** the base model.
 
 ---
@@ -53,7 +53,7 @@ where $s$ is a scale (often absorbed into training or exposed as a knob).
 
 ### What the LoRA equation means
 
-LoRA updates a model weight matrix by adding a small, low-rank correction instead of modifying the full matrix.  
+LoRA updates a model weight matrix by adding a small, low-rank correction instead of modifying the full matrix.
 The update is written as:
 
 $$
@@ -87,9 +87,9 @@ In plain terms:
 
 CMWE applies different deltas $\Delta W_k$ depending on detected context $k$:
 
-- $k = \text{none} $ → base model only  
-- $k = \text{cite} $ → citation-guard LoRA  
-- $k = \text{math} $ → undefined-math-guard LoRA  
+- $k = \text{none} $ → base model only
+- $k = \text{cite} $ → citation-guard LoRA
+- $k = \text{math} $ → undefined-math-guard LoRA
 - extendable: $\text{private-info}$, $\text{unsafe-code}$, …
 
 ### Gating / routing
@@ -100,7 +100,7 @@ $$
 \alpha = \sigma(\beta (r - c))
 $$
 
-- $c$: center (when “half-on”)  
+- $c$: center (when “half-on”)
 - $\beta$: sharpness (how hard the gate is)
 
 Current runs use mostly-binary gating (thresholding), but the framework supports soft blending (future work):
@@ -117,24 +117,24 @@ where \(s\) is a scale.
 
 CMWE applies different deltas \(\Delta W_k\) depending on detected context \(k\):
 
-- \(\,k = \text{none}\,\) → base model only  
-- \(\,k = \text{cite}\,\) → citation-guard LoRA  
-- \(\,k = \text{math}\,\) → undefined-math-guard LoRA  
+- \(\,k = \text{none}\,\) → base model only
+- \(\,k = \text{cite}\,\) → citation-guard LoRA
+- \(\,k = \text{math}\,\) → undefined-math-guard LoRA
 - extendable: \(\text{private-info}\), \(\text{unsafe-code}\), …
 
 ---
 
 ### Gating / routing
 
-A router produces a risk score  
+A router produces a risk score
 \(r \in [0,1]\) and maps it to a gate value \(\alpha\) using a sigmoid:
 
 $$
 \alpha = \sigma(\beta (r - c))
 $$
 
-- \(c\): center (half-on point)  
-- \(\beta\): sharpness  
+- \(c\): center (half-on point)
+- \(\beta\): sharpness
 
 Current runs use mostly binary gating, but soft blending is also supported:
 

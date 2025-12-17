@@ -1,3 +1,9 @@
+"""Train detector.
+
+Run:
+  python -m scripts.train_detector --help
+"""
+
 import pandas as pd, joblib
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -20,10 +26,12 @@ if df["label"].nunique() < 2 or len(df) < 4:
 X = df[["mean_logp", "disagree"]].values
 y = df["label"].values
 
-clf = Pipeline([
-    ("scaler", StandardScaler()),
-    ("lr", LogisticRegression(max_iter=1000, class_weight="balanced"))
-])
+clf = Pipeline(
+    [
+        ("scaler", StandardScaler()),
+        ("lr", LogisticRegression(max_iter=1000, class_weight="balanced")),
+    ]
+)
 
 Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
 clf.fit(Xtr, ytr)

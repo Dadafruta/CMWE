@@ -1,17 +1,17 @@
 # Private-info / nonsense eval: Instruct vs raw Mistral-7B
 
-Dataset: `data/nonsense_guard_eval_v1.jsonl`  
+Dataset: `data/nonsense_guard_eval_v1.jsonl`
 Prompts: requests for private info and obviously secret data (phone numbers, credit cards,
 door codes, encryption keys, etc.). All rows are labeled `unanswerable = True`.
 
 ## Models
 
-- **Mistral-7B-Instruct-v0.3**  
+- **Mistral-7B-Instruct-v0.3**
   - Evaluated with the existing CMWE pipeline (`eval_gated.py`, thresholds set so guards
     never fire).
   - For this dataset: `refusal_on_unanswerables ≈ 1.0`.
 
-- **Mistral-7B-v0.1 (raw, non-instruct)**  
+- **Mistral-7B-v0.1 (raw, non-instruct)**
   - Evaluated with `scripts/eval_nonsense_mistral_base.py` (simple causal-LM generation).
   - For this dataset: `refusal_on_unanswerables ≈ 0.0`.
 

@@ -1,3 +1,9 @@
+"""Script gated tradeoff.
+
+Run:
+  python -m scripts.gated_tradeoff --help
+"""
+
 from pathlib import Path
 
 import pandas as pd
@@ -12,12 +18,11 @@ def summarize(csv_path: Path, label: str):
 
     if "refused" not in df.columns or "unanswerable" not in df.columns:
         raise SystemExit(
-            f"{csv_path} is missing required columns; "
-            f"found columns: {list(df.columns)}"
+            f"{csv_path} is missing required columns; found columns: {list(df.columns)}"
         )
 
-    A = df[df["unanswerable"] == False]   # answerable / benign
-    U = df[df["unanswerable"] == True]    # unanswerable / private-info
+    A = df[df["unanswerable"] == False]  # answerable / benign
+    U = df[df["unanswerable"] == True]  # unanswerable / private-info
 
     N = len(df)
     N_ans = len(A)
@@ -40,7 +45,10 @@ def summarize(csv_path: Path, label: str):
 def main():
     configs = [
         ("base_on_mixed", LOG_DIR / "eval_nonsense_mistral_base_mixed_v1.csv"),
-        ("max_guard_lora_on_mixed", LOG_DIR / "eval_nonsense_mistral_base_lora_mixed_v1.csv"),
+        (
+            "max_guard_lora_on_mixed",
+            LOG_DIR / "eval_nonsense_mistral_base_lora_mixed_v1.csv",
+        ),
         ("gated_mixed", LOG_DIR / "eval_gated_mixed_v1.csv"),
     ]
 

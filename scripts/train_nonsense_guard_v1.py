@@ -30,6 +30,7 @@ REFUSAL_TEMPLATE = (
     "It involves private, secret, or non-public data."
 )
 
+
 def load_rows():
     rows = []
     for line in TRAIN_PATH.read_text(encoding="utf-8").splitlines():
@@ -37,6 +38,7 @@ def load_rows():
             continue
         rows.append(json.loads(line))
     return rows
+
 
 def make_dataset(tokenizer):
     rows = load_rows()
@@ -53,7 +55,7 @@ def make_dataset(tokenizer):
         enc = tokenizer(
             batch["text"],
             truncation=True,
-            padding="max_length",   # fixed length => no shape mismatch
+            padding="max_length",  # fixed length => no shape mismatch
             max_length=256,
         )
         enc["labels"] = enc["input_ids"].copy()
@@ -61,6 +63,7 @@ def make_dataset(tokenizer):
 
     ds_tok = ds.map(tokenize, batched=True, remove_columns=["text"])
     return ds_tok
+
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -93,8 +96,13 @@ def main():
         bias="none",
         task_type="CAUSAL_LM",
         target_modules=[
-            "q_proj","k_proj","v_proj","o_proj",
-            "gate_proj","up_proj","down_proj",
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
         ],
     )
 
@@ -129,6 +137,7 @@ def main():
     model.save_pretrained(str(OUT_DIR))
     tokenizer.save_pretrained(str(OUT_DIR))
     print("Saved LoRA adapter to", OUT_DIR)
+
 
 if __name__ == "__main__":
     main()

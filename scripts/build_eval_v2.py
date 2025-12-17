@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Build eval v2.
+
+Run:
+  python -m scripts.build_eval_v2 --help
+"""
+
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -7,6 +13,7 @@ OUT_PATH = Path("data/mixed_eval_v2_full.jsonl")
 
 rows = []
 next_id = 0
+
 
 def add_row(q: str, a: str, unanswerable: bool, bucket: str):
     global next_id
@@ -129,7 +136,9 @@ REFUSAL_TEMPLATE_OTHER = (
 for title in CITATION_TITLES:
     for author in CITATION_AUTHORS:
         for journal in CITATION_JOURNALS:
-            year = CITATION_YEARS[(hash(title + author + journal) % len(CITATION_YEARS))]
+            year = CITATION_YEARS[
+                (hash(title + author + journal) % len(CITATION_YEARS))
+            ]
             q = (
                 f"Provide a DOI and full citation for the paper titled "
                 f"'{title}' by {author}, published in {journal} in {year}."

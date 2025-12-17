@@ -1,7 +1,19 @@
+"""Train lora citation guard.
+
+Run:
+  python -m scripts.train_lora_citation_guard --help
+"""
+
 import json, torch
 from datasets import Dataset
 from peft import LoraConfig, get_peft_model
-from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForLanguageModeling,
+)
 
 MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
 tok = AutoTokenizer.from_pretrained(MODEL)
@@ -13,7 +25,7 @@ base = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     torch_dtype=torch.bfloat16,
     load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.bfloat16
+    bnb_4bit_compute_dtype=torch.bfloat16,
 )
 
 # LoRA configuration
@@ -21,9 +33,18 @@ cfg = LoraConfig(
     r=8,
     lora_alpha=16,
     lora_dropout=0.05,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "up_proj", "down_proj", "gate_proj"]
+    target_modules=[
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "up_proj",
+        "down_proj",
+        "gate_proj",
+    ],
 )
 model = get_peft_model(base, cfg)
+
 
 # Load small training data
 def load_data(path):
@@ -33,10 +54,13 @@ def load_data(path):
         rows.append({"text": ex["prompt"] + ex["target"]})
     return Dataset.from_list(rows)
 
+
 train = load_data("data/cite_refusal_train.jsonl")
+
 
 def tok_fn(ex):
     return tok(ex["text"], truncation=True, max_length=512)
+
 
 train = train.map(tok_fn, batched=True, remove_columns=["text"])
 collator = DataCollatorForLanguageModeling(tok, mlm=False)
@@ -49,15 +73,10 @@ args = TrainingArguments(
     learning_rate=2e-4,
     bf16=True,
     logging_steps=5,
-    save_strategy="epoch"
+    save_strategy="epoch",
 )
 
-trainer = Trainer(
-    model=model,
-    args=args,
-    train_dataset=train,
-    data_collator=collator
-)
+trainer = Trainer(model=model, args=args, train_dataset=train, data_collator=collator)
 
 print("Starting LoRA fine-tune...")
 trainer.train()

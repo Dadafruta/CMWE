@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""Script nonsense tradeoff.
+
+Run:
+  python -m scripts.nonsense_tradeoff --help
+"""
 
 import math
 from pathlib import Path
@@ -15,12 +20,11 @@ def summarize(csv_path: Path, label: str):
 
     if "refused" not in df.columns or "unanswerable" not in df.columns:
         raise SystemExit(
-            f"{csv_path} is missing required columns. "
-            f"Found columns: {list(df.columns)}"
+            f"{csv_path} is missing required columns. Found columns: {list(df.columns)}"
         )
 
-    A = df[df["unanswerable"] == False]   # answerable / benign
-    U = df[df["unanswerable"] == True]    # unanswerable / private-info
+    A = df[df["unanswerable"] == False]  # answerable / benign
+    U = df[df["unanswerable"] == True]  # unanswerable / private-info
 
     N = len(df)
     N_ans = len(A)
@@ -42,10 +46,11 @@ def summarize(csv_path: Path, label: str):
 
 def main():
     configs = [
-        ("base_on_mixed",
-         LOG_DIR / "eval_nonsense_mistral_base_mixed_v1.csv"),
-        ("base_plus_nonsense_guard_lora",
-         LOG_DIR / "eval_nonsense_mistral_base_lora_mixed_v1.csv"),
+        ("base_on_mixed", LOG_DIR / "eval_nonsense_mistral_base_mixed_v1.csv"),
+        (
+            "base_plus_nonsense_guard_lora",
+            LOG_DIR / "eval_nonsense_mistral_base_lora_mixed_v1.csv",
+        ),
     ]
 
     rows = []

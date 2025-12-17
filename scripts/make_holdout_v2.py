@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
+"""Generate holdout v2.
+
+Run:
+  python -m scripts.make_holdout_v2 --help
+"""
+
 from __future__ import annotations
 import argparse, json, random
 from pathlib import Path
 from typing import Iterable, Mapping, List
+
 
 def load_jsonl(path: str | Path) -> List[dict]:
     p = Path(path)
@@ -13,12 +20,14 @@ def load_jsonl(path: str | Path) -> List[dict]:
         rows.append(json.loads(line))
     return rows
 
+
 def write_jsonl(path: str | Path, rows: Iterable[Mapping]) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open("w", encoding="utf-8") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
 
 def sample_balanced(rows: List[dict], n: int, rng: random.Random) -> List[dict]:
     ans = [r for r in rows if not r.get("unanswerable", False)]
@@ -33,6 +42,7 @@ def sample_balanced(rows: List[dict], n: int, rng: random.Random) -> List[dict]:
     picked = ans[:take_ans] + unans[:take_unans]
     rng.shuffle(picked)
     return picked
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -59,6 +69,7 @@ def main() -> None:
     n_unans = sum(r.get("unanswerable", False) for r in selected)
     print(f"Wrote {len(selected)} rows to {args.out}")
     print(f"Answerable: {n_ans} | Unanswerable: {n_unans}")
+
 
 if __name__ == "__main__":
     main()

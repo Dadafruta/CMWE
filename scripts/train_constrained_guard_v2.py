@@ -1,3 +1,9 @@
+"""Train constrained guard v2.
+
+Run:
+  python -m scripts.train_constrained_guard_v2 --help
+"""
+
 import json
 from pathlib import Path
 
@@ -119,8 +125,15 @@ def main():
         r=LORA_R,
         lora_alpha=LORA_ALPHA,
         lora_dropout=LORA_DROPOUT,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                        "gate_proj", "up_proj", "down_proj"],
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ],
         bias="none",
         task_type="CAUSAL_LM",
     )

@@ -1,3 +1,9 @@
+"""Summarize tradeoffs.
+
+Run:
+  python -m scripts.summarize_tradeoffs --help
+"""
+
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,6 +16,7 @@ CONFIGS = [
     ("gated", LOG_DIR / "gated_tradeoff_points.csv"),
 ]
 
+
 def maybe_load(label, path: Path):
     if not path.exists():
         print(f"[warn] Missing {path}, skipping {label}")
@@ -17,6 +24,7 @@ def maybe_load(label, path: Path):
     df = pd.read_csv(path)
     df["experiment"] = label
     return df
+
 
 def main():
     rows = []
@@ -54,7 +62,9 @@ def main():
     print(all_df.to_csv(index=False))
 
     # Make a scatter plot: x = false refusals, y = refusals on unanswerables
-    if {"refusal_on_unanswerables", "false_refusal_on_answerables"}.issubset(all_df.columns):
+    if {"refusal_on_unanswerables", "false_refusal_on_answerables"}.issubset(
+        all_df.columns
+    ):
         fig, ax = plt.subplots()
 
         for label, group in all_df.groupby("experiment"):
@@ -82,6 +92,7 @@ def main():
         print(f"Wrote {out_png}")
     else:
         print("Missing required columns for plotting; skipping figure.")
+
 
 if __name__ == "__main__":
     main()
