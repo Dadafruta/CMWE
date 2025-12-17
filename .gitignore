@@ -13,3 +13,5 @@ env/
 venv/
 runs/
 adapters/**/checkpoint-*/
+.venv_math/
+data/daily_bench_v4/
