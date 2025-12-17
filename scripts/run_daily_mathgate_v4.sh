@@ -19,7 +19,7 @@ python -m scripts.build_daily_mathgate_bench_v4 \
 
 python -m scripts.eval_daily_mathgate_bench_v4 \
   --data_dir "$OUTDIR" \
-  --show 30 |& tee "$LOG"
+  --out_csv "$OUTDIR/eval.csv" |& tee "$LOG"
 
 echo "OK: $OUTDIR"
 echo "LOG: $LOG"
