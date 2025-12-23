@@ -30,3 +30,16 @@ logs/
 data/daily_bench_v4/
 
 logs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+# --- CMWE local/venv/cache ---
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.mypy_cache/
+*.log
+# --- END CMWE local/venv/cache ---
+/tmp/cmwe_smoke_*

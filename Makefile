@@ -1,29 +1,27 @@
-.PHONY: help lfs-check py-check daily-v4 eval-latest tree
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
 
-help:
-	@echo "Common targets:"
-	@echo "  make lfs-check   - verify Git LFS pointers/files"
-	@echo "  make py-check    - compile Python files (syntax/import sanity)"
-	@echo "  make daily-v4    - run full daily_mathgate_v4 pipeline"
-	@echo "  make eval-latest - re-eval latest daily_bench_v4 run"
-	@echo "  make tree        - show top-level repo structure"
+# Lets us avoid tabs in recipes (copy/paste friendly)
+.RECIPEPREFIX := >
 
-lfs-check:
-	git lfs install
-	git lfs fsck
-	git lfs ls-files | head -n 20
+VENV ?= .venv
+PYTHON := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
 
-py-check:
-	python -m compileall -q .
+.PHONY: install preflight smoke clean
 
-daily-v4:
-	bash scripts/run_daily_mathgate_v4_pipeline.sh
+$(PYTHON):
+> python3 -m venv $(VENV)
 
-eval-latest:
-	bash scripts/eval_latest_daily_mathgate_v4.sh
+install: $(PYTHON)
+> $(PIP) install -U pip wheel setuptools
+> $(PIP) install -r requirements.txt
 
-tree:
-	@find . -maxdepth 2 -type d \
-	  -not -path './.git*' \
-	  -not -path './.venv*' \
-	  -print | sed 's|^\./||' | sort
+preflight: install
+> $(PYTHON) scripts/preflight.py
+
+smoke: install
+> PYTHON="$(PYTHON)" bash scripts/smoke.sh
+
+clean:
+> rm -rf $(VENV) .mypy_cache .ruff_cache __pycache__ */__pycache__
