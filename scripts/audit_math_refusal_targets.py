@@ -44,7 +44,9 @@ RE_DIV0 = re.compile(
     re.IGNORECASE,
 )
 
-RE_LOG = re.compile(r"(?:\\ln\b|\bln\b|\blog\b|log_)", re.IGNORECASE)
+RE_LOG = re.compile(r"\b(?:ln|log(?:_[a-z0-9]+)?|logarithm)\b", re.IGNORECASE)
+RE_NEGNUM = re.compile(r"(?<!\w)-\d+\b")
+RE_ZERO = re.compile(r"\b(?:0|zero)\b", re.IGNORECASE)
 RE_LOG_DOMAIN = re.compile(
     r"(?:(?:\\ln|\bln|\blog|log_)[^()\n]{0,30}\(\s*0\s*\)"
     r"|(?:\\ln|\bln|\blog|log_)[^()\n]{0,30}\(\s*-\s*\d"
@@ -71,7 +73,12 @@ def infer_category(prompt: str) -> str | None:
         return "matrix"
     if RE_DIV0.search(s):
         return "div0"
-    if RE_LOG.search(s) and RE_LOG_DOMAIN.search(s):
+    if RE_LOG.search(s) and (
+        RE_NEGNUM.search(s)
+        or RE_ZERO.search(s)
+        or "nonpositive" in s.lower()
+        or "negative" in s.lower()
+    ):
         return "log"
     if RE_SQRTNEG.search(s):
         return "sqrt_neg"
