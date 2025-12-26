@@ -79,7 +79,7 @@ RE_SQRTNEG = re.compile(
 
 RE_FACTNEG = re.compile(r"(?:\(\s*-\s*\d+\s*\)|-\s*\d+)\s*!", re.IGNORECASE)
 RE_ZZ = re.compile(r"\b0\s*\^\s*0\b", re.IGNORECASE)
-RE_LIMIT = re.compile(r"\blim\b|\blimit\b", re.IGNORECASE)
+RE_LIMIT = re.compile(r"(?:\\?lim)_\{|\blimit\b|\blim\b", re.IGNORECASE)
 RE_TRIG = re.compile(r"\b(?:acos|arccos|asin|arcsin|atanh)\b", re.IGNORECASE)
 
 
