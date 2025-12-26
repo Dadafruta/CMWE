@@ -5,7 +5,12 @@ Run:
   python -m scripts.analog_cmwe --help
 """
 
-import os, re, math, sys, joblib, torch
+import os
+import re
+import math
+import sys
+import joblib
+import torch
 from dataclasses import dataclass
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.utils import logging as hf_logging

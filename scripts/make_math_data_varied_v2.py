@@ -4,7 +4,10 @@ Run:
   python -m scripts.make_math_data_varied_v2 --help
 """
 
-import json, random, argparse, pathlib
+import json
+import random
+import argparse
+import pathlib
 
 pathlib.Path("data").mkdir(exist_ok=True)
 
@@ -158,7 +161,7 @@ def gen_otherbad(N):
 
 
 def main():
-    import argparse, random
+    import random
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--size", type=int, default=5000)

@@ -5,7 +5,11 @@ Run:
   python -m scripts.make_disjoint_holdout_v4 --help
 """
 
-import argparse, json, re, sys, subprocess
+import argparse
+import json
+import re
+import sys
+import subprocess
 from pathlib import Path
 from collections import Counter
 import random

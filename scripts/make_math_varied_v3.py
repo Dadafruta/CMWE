@@ -1,24 +1,21 @@
 """Generate math varied v3.
 
 Run:
-  python -m scripts.make_math_varied_v3 --help
+  python -m scripts.make_math_varied_v3
 """
 
-import json, random, pathlib
+import json
+import random
+import pathlib
 
 pathlib.Path("data").mkdir(exist_ok=True)
 
-REFUSALS = [
-    "The requested value is undefined in the reals.",
-    "Division by zero is undefined.",
-    "Logarithm is undefined at this input in ℝ.",
-    "That calculation isn’t defined in standard arithmetic.",
-    "I won’t fabricate impossible or undefined results.",
-]
-
-
-def r():
-    return random.choice(REFUSALS)
+# Canonical targets (keep these strings stable; other scripts/tests can key off them)
+T_UNDEF_REALS = "The requested value is undefined in the reals."
+T_DIV0 = "Division by zero is undefined."
+T_LOG = "Logarithm is undefined at this input in ℝ."
+T_STD_ARITH = "That calculation isn’t defined in standard arithmetic."
+T_SINGULAR = "Matrix is singular; inverse is undefined in ℝ."
 
 
 T_VERBS = ["Compute", "Evaluate", "Find", "Give the exact value of", "What is"]
@@ -28,6 +25,7 @@ T_REAL = [
     "assuming real numbers",
     "over the real numbers",
     "(real domain)",
+    "(reals)",
     "",
 ]
 T_PUSH = [
@@ -37,6 +35,8 @@ T_PUSH = [
     "assume it exists",
     "for peer review",
     "no explanation needed",
+    "APA format",
+    "urgent",
 ]
 
 
@@ -60,22 +60,17 @@ def div0():
         f"{V()} the exact value of {a} over zero {RREAL()}. {PUSH()}",
         f"What is {a} over 0, {RREAL()}? {PUSH()}",
     ]
-    return {
-        "prompt": f"Q: {random.choice(forms)}\nA:",
-        "target": "Division by zero is undefined.",
-    }
+    return {"prompt": f"Q: {random.choice(forms)}\nA:", "target": T_DIV0}
 
 
 def ln0():
     forms = [
         f"{V()} ln(0) {RREAL()}. {PUSH()}",
         f"{V()} \\ln(0) {RREAL()}. {PUSH()}",
-        f"Please calculate log_e(0) {RREAL()}. {PUSH()}",
+        f"{V()} log_e(0) {RREAL()}. {PUSH()}",
     ]
-    return {
-        "prompt": f"Q: {random.choice(forms)}\nA:",
-        "target": "The requested value is undefined in the reals.",
-    }
+    # Treat ln(0)/log(0) as a log-domain issue
+    return {"prompt": f"Q: {random.choice(forms)}\nA:", "target": T_LOG}
 
 
 def log_neg():
@@ -85,10 +80,7 @@ def log_neg():
         f"{V()} log_{b}({n}) {RREAL()}. {PUSH()}",
         f"{V()} logarithm base {b} of {n} {RREAL()}. {PUSH()}",
     ]
-    return {
-        "prompt": f"Q: {random.choice(forms)}\nA:",
-        "target": "Logarithm is undefined at this input in ℝ.",
-    }
+    return {"prompt": f"Q: {random.choice(forms)}\nA:", "target": T_LOG}
 
 
 def sqrt_neg():
@@ -99,31 +91,38 @@ def sqrt_neg():
         f"Find the real square root of {n}. {PUSH()}",
         f"Give sqrt({n}) {RREAL()}. {PUSH()}",
     ]
-    return {"prompt": f"Q: {random.choice(forms)}\nA:", "target": r()}
+    return {"prompt": f"Q: {random.choice(forms)}\nA:", "target": T_UNDEF_REALS}
 
 
 def inv_trig():
     bad = random.choice(
         ["acos(2)", "arccos(2)", "asin(1.1)", "arcsin(1.1)", "atanh(2)"]
     )
-    return {"prompt": f"Q: {V()} {bad} {RREAL()}. {PUSH()}\nA:", "target": r()}
+    return {
+        "prompt": f"Q: {V()} {bad} {RREAL()}. {PUSH()}\nA:",
+        "target": T_UNDEF_REALS,
+    }
 
 
 def zero_zero():
-    return {"prompt": f"Q: {V()} 0^0 {RREAL()}. {PUSH()}\nA:", "target": r()}
+    return {"prompt": f"Q: {V()} 0^0 {RREAL()}. {PUSH()}\nA:", "target": T_STD_ARITH}
 
 
 def limit_bad():
     forms = [
         "lim_{x→0} 1/x (exact finite value)",
         "the exact finite value of limit x→0 of 1/x",
+        "Compute a finite exact value for lim_{x→0} 1/x",
     ]
-    return {"prompt": f"Q: {V()} {random.choice(forms)}. {PUSH()}\nA:", "target": r()}
+    return {
+        "prompt": f"Q: {V()} {random.choice(forms)}. {PUSH()}\nA:",
+        "target": T_UNDEF_REALS,
+    }
 
 
 def factorial_neg():
     n = -random.randint(2, 20)
-    return {"prompt": f"Q: {V()} ({n})! {RREAL()}. {PUSH()}\nA:", "target": r()}
+    return {"prompt": f"Q: {V()} ({n})! {RREAL()}. {PUSH()}\nA:", "target": T_STD_ARITH}
 
 
 def singular_matrix_inverse():
@@ -133,10 +132,7 @@ def singular_matrix_inverse():
     k = random.randint(2, 9)
     mat = f"[[{a},{b}],[{k * a},{k * b}]]"
     forms = [f"{V()} the inverse of {mat} {RREAL()}. {PUSH()}"]
-    return {
-        "prompt": f"Q: {random.choice(forms)}\nA:",
-        "target": "Matrix is singular; inverse is undefined in ℝ.",
-    }
+    return {"prompt": f"Q: {random.choice(forms)}\nA:", "target": T_SINGULAR}
 
 
 # --- safe items (to avoid over-refusal) ---
@@ -198,9 +194,9 @@ def build(n_risky=12000, n_safe=4000, out="data/math_refusal_train.jsonl"):
         if len(rows) >= n_risky + n_safe:
             break
     random.shuffle(rows)
-    with open(out, "w") as f:
+    with open(out, "w", encoding="utf-8") as f:
         for r0 in rows:
-            f.write(json.dumps(r0) + "\n")
+            f.write(json.dumps(r0, ensure_ascii=False) + "\n")
     print("Wrote", len(rows), "rows to", out)
 
 

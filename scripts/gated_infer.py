@@ -4,7 +4,10 @@ Run:
   python -m scripts.gated_infer --help
 """
 
-import re, json, torch, joblib
+import re
+import json
+import torch
+import joblib
 from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
@@ -60,7 +63,7 @@ def set_adapter_and_scale(model: PeftModel, adapter: str, scale: float):
                     r = getattr(m, "r", 8)
                 base = (alpha / r) if r else 1.0
                 m.scaling = float(base * scale)
-            except:
+            except Exception:
                 pass
 
 

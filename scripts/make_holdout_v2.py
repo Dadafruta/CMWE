@@ -6,7 +6,9 @@ Run:
 """
 
 from __future__ import annotations
-import argparse, json, random
+import argparse
+import json
+import random
 from pathlib import Path
 from typing import Iterable, Mapping, List
 

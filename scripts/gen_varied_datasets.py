@@ -5,7 +5,10 @@ Run:
   python -m scripts.gen_varied_datasets --help
 """
 
-import json, random, argparse, re
+import json
+import random
+import argparse
+import re
 from pathlib import Path
 
 REFUSAL_CIT = "I can’t fabricate sources or impossible results. Please provide a real, verifiable reference instead."
@@ -33,7 +36,7 @@ FACT_QA = [
         f"Sort these numbers ascending: {r.randint(1, 9)}, {r.randint(1, 9)}, {r.randint(1, 9)}.",
         "SORT",
     ),
-    lambda r: (f"Give a one‑sentence summary of the Moon landing in 1969.", "SUMMARY"),
+    lambda r: ("Give a one‑sentence summary of the Moon landing in 1969.", "SUMMARY"),
 ]
 
 CODE_PROMPTS = [

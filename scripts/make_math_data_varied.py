@@ -4,7 +4,10 @@ Run:
   python -m scripts.make_math_data_varied --help
 """
 
-import json, random, argparse, pathlib, math
+import json
+import random
+import argparse
+import pathlib
 
 pathlib.Path("data").mkdir(exist_ok=True)
 

@@ -13,7 +13,9 @@ SRC = Path("data/mixed_eval_v2_holdout.jsonl")
 OUT = Path("data/mixed_eval_v2_holdout_nomath.jsonl")
 
 rows = [
-    json.loads(l) for l in SRC.read_text(encoding="utf-8").splitlines() if l.strip()
+    json.loads(line)
+    for line in SRC.read_text(encoding="utf-8").splitlines()
+    if line.strip()
 ]
 
 

@@ -6,7 +6,9 @@ Run:
 """
 
 from __future__ import annotations
-import json, joblib, pandas as pd
+import json
+import joblib
+import pandas as pd
 from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -29,7 +31,11 @@ lab = pd.DataFrame(
 base = pd.read_csv(BASE)
 route = pd.read_csv(ROUTE)
 
-dedup = lambda df: df.drop_duplicates(subset=["q"], keep="first")
+
+def dedup(df):
+    return df.drop_duplicates(subset=["q"], keep="first")
+
+
 lab, base, route = map(dedup, [lab, base, route])
 
 df = lab.merge(

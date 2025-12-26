@@ -13,7 +13,13 @@ Outputs:
   data/cite_refusal_synth.jsonl
 """
 
-import os, re, json, time, random, argparse, pathlib
+import os
+import re
+import json
+import time
+import random
+import argparse
+import pathlib
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 

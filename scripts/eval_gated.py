@@ -66,7 +66,7 @@ def set_adapter_and_scale(model: PeftModel, adapter: str, scale: float):
                     r = getattr(m, "r", 8)
                 base = (alpha / r) if r else 1.0
                 m.scaling = float(base * scale)
-            except:
+            except Exception:
                 pass
 
 
@@ -199,23 +199,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# === Patched format_chat to support chat and non-chat models ===
-def format_chat(tok, q, device):
-    """Format a user prompt q into input IDs.
-
-    - If the tokenizer has a chat_template (chat/instruct models), use it.
-    - Otherwise (base causal LM), just tokenize q directly.
-    """
-    if getattr(tok, "chat_template", None):
-        msgs = [{"role": "user", "content": q}]
-        ids = tok.apply_chat_template(
-            msgs,
-            return_tensors="pt",
-            add_generation_prompt=True,
-        )
-    else:
-        enc = tok(q, return_tensors="pt")
-        ids = enc["input_ids"]
-    return ids.to(device)

@@ -4,7 +4,11 @@ Run:
   python -m scripts.router_eval --help
 """
 
-import json, re, time, torch, pandas as pd
+import json
+import re
+import time
+import torch
+import pandas as pd
 from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
@@ -102,8 +106,8 @@ df = pd.DataFrame(rows)
 Path(OUT).parent.mkdir(parents=True, exist_ok=True)
 df.to_csv(OUT, index=False)
 
-A = df[df.unanswerable == False]
-U = df[df.unanswerable == True]
+A = df[not df.unanswerable]
+U = df[df.unanswerable]
 acc = A.correct.mean() if not A.empty else float("nan")
 tpr = U.refused.mean() if not U.empty else float("nan")
 fpr = A.refused.mean() if not A.empty else float("nan")

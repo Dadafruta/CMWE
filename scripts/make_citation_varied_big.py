@@ -4,7 +4,10 @@ Run:
   python -m scripts.make_citation_varied_big --help
 """
 
-import json, random, argparse, pathlib
+import json
+import random
+import argparse
+import pathlib
 
 pathlib.Path("data").mkdir(exist_ok=True)
 RISKY_T = [

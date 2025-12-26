@@ -5,8 +5,11 @@ Run:
   python -m scripts.eval_daily_mathgate_bench_v4 --help
 """
 
-import argparse, csv, json, re
-from collections import Counter, defaultdict
+import argparse
+import csv
+import json
+import re
+from collections import Counter
 from pathlib import Path
 
 import joblib

@@ -5,7 +5,7 @@ Run:
   python -m scripts.run_cmwe_plus_rag --help
 """
 
-import sys, re
+import sys
 from analog_cmwe import AnalogCMWE, MixerConfig, CITE_PAT, MATH_PAT
 from qa_rag import answer as rag_answer
 

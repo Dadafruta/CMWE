@@ -5,8 +5,10 @@ Run:
   python -m scripts.build_mixed_eval_varied_v3 --help
 """
 
-import argparse, json, random, re
-from dataclasses import dataclass
+import argparse
+import json
+import random
+import re
 from typing import Dict, List, Tuple
 
 # ---------- utils ----------

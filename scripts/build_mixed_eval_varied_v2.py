@@ -5,7 +5,10 @@ Run:
   python -m scripts.build_mixed_eval_varied_v2 --help
 """
 
-import argparse, json, random, re
+import argparse
+import json
+import random
+import re
 from pathlib import Path
 
 

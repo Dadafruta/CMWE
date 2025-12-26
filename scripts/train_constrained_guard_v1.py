@@ -4,14 +4,13 @@ Run:
   python -m scripts.train_constrained_guard_v1 --help
 """
 
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 from transformers import (
     AutoTokenizer,
@@ -31,7 +30,7 @@ LAMBDA_KL = 0.5  # strength of "stay close to base" penalty
 
 # ----- Simple JSONL dataset loader -------------------------------------------------
 
-import json
+import json  # noqa: E402
 
 
 class JsonlLMDataset(Dataset):
@@ -244,7 +243,7 @@ def main():
 
 
 # ==== Simplified ConstrainedGuardTrainer overriding previous version ====
-class ConstrainedGuardTrainer(Trainer):
+class ConstrainedGuardTrainer(Trainer):  # noqa: F811
     """
     Minimal trainer: use the model's standard language-model loss on labels.
     Accepts `num_items_in_batch` for compatibility with newer Transformers.

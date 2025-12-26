@@ -4,7 +4,7 @@ Run:
   python -m scripts.eval_ab --help
 """
 
-import json, re
+import json
 from conditional_infer import answer
 from pathlib import Path
 

@@ -4,7 +4,9 @@ Run:
   python -m scripts.eval_compare --help
 """
 
-import re, time, json, math
+import re
+import time
+import json
 from pathlib import Path
 import pandas as pd
 import torch
@@ -91,7 +93,7 @@ def run(mode: str, data):
 
 
 if __name__ == "__main__":
-    data = [json.loads(l) for l in Path("data/bench.jsonl").open()]
+    data = [json.loads(line) for line in Path("data/bench.jsonl").open()]
     rows = []
     rows += run("base", data)
     rows += run("cmwe", data)

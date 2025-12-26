@@ -5,7 +5,11 @@ Run:
 """
 
 import torch
-import argparse, json, re, time, torch, pandas as pd
+import argparse
+import json
+import re
+import time
+import pandas as pd
 from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
@@ -78,8 +82,8 @@ def summarize(csv_path):
     import pandas as pd
 
     df = pd.read_csv(csv_path)
-    ans = df[df.unanswerable == False]
-    unans = df[df.unanswerable == True]
+    ans = df[not df.unanswerable]
+    unans = df[df.unanswerable]
     acc = float("nan") if ans.empty else ans["correct"].mean()
     ref_un = float("nan") if unans.empty else unans["refused"].mean()
     ref_ans = float("nan") if ans.empty else ans["refused"].mean()
