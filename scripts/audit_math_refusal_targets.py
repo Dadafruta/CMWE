@@ -69,27 +69,58 @@ RE_TRIG = re.compile(r"\b(?:acos|arccos|asin|arcsin|atanh)\b", re.IGNORECASE)
 
 def infer_category(prompt: str) -> str | None:
     s = prompt
-    if RE_MATRIX.search(s):
+    sl = s.lower()
+
+    # Pull regexes defensively (avoids NameError if one script lacks a particular RE_* later).
+    RE_MATRIX_ = globals().get("RE_MATRIX")
+    RE_ZZ_ = globals().get("RE_ZZ")
+    RE_DIV0_ = globals().get("RE_DIV0")
+    RE_LOG_ = globals().get("RE_LOG")
+    RE_SQRTNEG_ = globals().get("RE_SQRTNEG")
+    RE_FACTNEG_ = globals().get("RE_FACTNEG")
+    RE_TRIG_ = globals().get("RE_TRIG")
+    RE_LIMIT_ = globals().get("RE_LIMIT")
+
+    if RE_MATRIX_ and RE_MATRIX_.search(s):
         return "matrix"
-    if RE_DIV0.search(s):
-        return "div0"
-    if RE_LOG.search(s) and (
-        RE_NEGNUM.search(s)
-        or RE_ZERO.search(s)
-        or "nonpositive" in s.lower()
-        or "negative" in s.lower()
-    ):
-        return "log"
-    if RE_SQRTNEG.search(s):
-        return "sqrt_neg"
-    if RE_FACTNEG.search(s):
-        return "fact_neg"
-    if RE_ZZ.search(s):
+
+    # 0/0 should not be lumped into div0.
+    if RE_ZZ_ and RE_ZZ_.search(s):
         return "zero_zero"
-    if RE_LIMIT.search(s):
-        return "limit"
-    if RE_TRIG.search(s):
+
+    # Division-by-zero (operator + wordy forms).
+    if (RE_DIV0_ and RE_DIV0_.search(s)) or (
+        "over zero" in sl
+        or "over 0" in sl
+        or "divided by zero" in sl
+        or "divided by 0" in sl
+        or "division by zero" in sl
+        or "division by 0" in sl
+    ):
+        return "div0"
+
+    # Log domain errors: require evidence of nonpositive input.
+    if RE_LOG_ and RE_LOG_.search(s):
+        if (
+            RE_NEGNUM.search(s)
+            or RE_ZERO.search(s)
+            or ("nonpositive" in sl)
+            or ("negative" in sl)
+        ):
+            return "log"
+
+    if RE_SQRTNEG_ and RE_SQRTNEG_.search(s):
+        return "sqrt_neg"
+
+    if RE_FACTNEG_ and RE_FACTNEG_.search(s):
+        return "fact_neg"
+
+    if RE_TRIG_ and RE_TRIG_.search(s):
         return "trig"
+
+    if RE_LIMIT_ and RE_LIMIT_.search(s):
+        return "limit"
+
     return None
 
 
