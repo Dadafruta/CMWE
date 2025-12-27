@@ -25,7 +25,7 @@ enc = SentenceTransformer("all-MiniLM-L6-v2")
 
 def retrieve(q, k=3):
     v = enc.encode([q], normalize_embeddings=True).astype("float32")
-    D, idxs = idx.search(v, k)
+    dists, idxs = idx.search(v, k)
     return float(dists[0][0]), [docs[i] for i in idxs[0]]
 
 

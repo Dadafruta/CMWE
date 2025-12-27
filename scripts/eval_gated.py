@@ -4,7 +4,12 @@ Run:
   python -m scripts.eval_gated --help
 """
 
-import re, json, time, torch, pandas as pd, joblib
+import re
+import json
+import time
+import torch
+import pandas as pd
+import joblib
 from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
@@ -175,13 +180,14 @@ def main():
         if i % 25 == 0:
             print(f"{i} done", flush=True)
         if i % 25 == 0:
-            print(f"%d done" % i, flush=True)
+            print("%d done" % i, flush=True)
 
     df = pd.DataFrame(recs)
     Path(args.out).parent.mkdir(exist_ok=True, parents=True)
     df.to_csv(args.out, index=False)
-    ans = df[df.unanswerable == False]
-    un = df[df.unanswerable == True]
+    ua = df["unanswerable"].fillna(False).astype(bool)
+    ans = df[~ua]
+    un = df[ua]
     acc = float("nan") if ans.empty else ans["correct"].mean()
     tpr = float("nan") if un.empty else un["refused"].mean()
     fpr = float("nan") if ans.empty else ((ans["refused"]) & (~ans["correct"])).mean()
