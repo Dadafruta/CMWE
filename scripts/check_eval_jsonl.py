@@ -5,7 +5,10 @@ Run:
   python -m scripts.check_eval_jsonl --help
 """
 
-import sys, json, collections, re
+import sys
+import json
+import collections
+import re
 
 _ws = re.compile(r"\s+")
 
@@ -16,7 +19,7 @@ def norm_q(s):
 
 def main(paths):
     for p in paths:
-        rows = [json.loads(l) for l in open(p, encoding="utf-8") if l.strip()]
+        rows = [json.loads(line) for line in open(p, encoding="utf-8") if line.strip()]
         print("\n==", p)
         print("N:", len(rows))
         buckets = collections.Counter(r.get("bucket", "?") for r in rows)

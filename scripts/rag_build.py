@@ -4,9 +4,10 @@ Run:
   python -m scripts.rag_build --help
 """
 
-import pickle, pathlib
+import pickle
+import pathlib
 from datasets import load_dataset
-import faiss, numpy as np
+import faiss
 from sentence_transformers import SentenceTransformer
 
 pathlib.Path("rag").mkdir(exist_ok=True)

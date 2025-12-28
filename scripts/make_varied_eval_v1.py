@@ -5,7 +5,10 @@ Run:
   python -m scripts.make_varied_eval_v1 --help
 """
 
-import argparse, json, random, re
+import argparse
+import json
+import random
+import re
 from pathlib import Path
 from typing import Iterable, Mapping
 

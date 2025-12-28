@@ -4,7 +4,9 @@ Run:
   python -m scripts.qa_rag --help
 """
 
-import pickle, faiss, numpy as np, torch
+import pickle
+import faiss
+import torch
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -23,8 +25,8 @@ enc = SentenceTransformer("all-MiniLM-L6-v2")
 
 def retrieve(q, k=3):
     v = enc.encode([q], normalize_embeddings=True).astype("float32")
-    D, I = idx.search(v, k)
-    return float(D[0][0]), [docs[i] for i in I[0]]
+    dists, idxs = idx.search(v, k)
+    return float(dists[0][0]), [docs[i] for i in idxs[0]]
 
 
 def answer(q, tau=0.35):

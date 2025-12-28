@@ -5,7 +5,10 @@ Run:
   python -m scripts.build_daily_mathgate_bench_v4 --help
 """
 
-import argparse, json, hashlib, random
+import argparse
+import json
+import hashlib
+import random
 from pathlib import Path
 import re
 

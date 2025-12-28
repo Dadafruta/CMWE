@@ -4,7 +4,8 @@ Run:
   python -m scripts.plot_metrics --help
 """
 
-import os, re
+import os
+import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

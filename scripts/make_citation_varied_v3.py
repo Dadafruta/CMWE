@@ -4,7 +4,9 @@ Run:
   python -m scripts.make_citation_varied_v3 --help
 """
 
-import json, random, pathlib, re
+import json
+import random
+import pathlib
 
 pathlib.Path("data").mkdir(exist_ok=True)
 

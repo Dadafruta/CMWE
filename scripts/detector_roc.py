@@ -4,7 +4,10 @@ Run:
   python -m scripts.detector_roc --help
 """
 
-import json, numpy as np, pandas as pd, matplotlib.pyplot as plt
+import json
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -45,8 +48,8 @@ def mix(m):
     useR = R.loc[m, ["correct", "refused", "unanswerable"]]
     useB = B.loc[~m, ["correct", "refused", "unanswerable"]]
     df = pd.concat([useR, useB], axis=0)
-    A = df[df.unanswerable == False]
-    U = df[df.unanswerable == True]
+    A = df[not df.unanswerable]
+    U = df[df.unanswerable]
     acc = A.correct.mean() if not A.empty else float("nan")
     tpr = U.refused.mean() if not U.empty else float("nan")
     fpr = A.refused.mean() if not A.empty else float("nan")

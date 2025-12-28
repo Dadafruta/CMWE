@@ -4,7 +4,9 @@ Run:
   python -m scripts.make_math_data --help
 """
 
-import json, random, pathlib
+import json
+import random
+import pathlib
 
 pathlib.Path("data").mkdir(exist_ok=True)
 prompts = [

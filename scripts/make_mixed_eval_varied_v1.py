@@ -5,7 +5,10 @@ Run:
   python -m scripts.make_mixed_eval_varied_v1 --help
 """
 
-import argparse, json, random, re, string
+import argparse
+import json
+import random
+import re
 from pathlib import Path
 
 DESC = """Build a varied, balanced, de-duplicated mixed eval set for CMWE.

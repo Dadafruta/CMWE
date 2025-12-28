@@ -4,7 +4,9 @@ Run:
   python -m scripts.extract_features --help
 """
 
-import json, math, itertools
+import json
+import math
+import itertools
 from pathlib import Path
 
 import pandas as pd

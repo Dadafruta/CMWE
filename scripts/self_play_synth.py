@@ -4,7 +4,12 @@ Run:
   python -m scripts.self_play_synth --help
 """
 
-import os, re, json, time, random, argparse, pathlib
+import re
+import json
+import time
+import random
+import argparse
+import pathlib
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 

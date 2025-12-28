@@ -21,8 +21,8 @@ def summarize(csv_path: Path, label: str):
             f"{csv_path} is missing required columns; found columns: {list(df.columns)}"
         )
 
-    A = df[df["unanswerable"] == False]  # answerable / benign
-    U = df[df["unanswerable"] == True]  # unanswerable / private-info
+    A = df[not df["unanswerable"]]  # answerable / benign
+    U = df[df["unanswerable"]]  # unanswerable / private-info
 
     N = len(df)
     N_ans = len(A)

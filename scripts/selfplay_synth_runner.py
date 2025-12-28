@@ -8,7 +8,11 @@ Self‑play synthesizer:
 This is slow and GPU‑heavy by design (good overnight job).
 """
 
-import argparse, json, random, re, time, string
+import argparse
+import json
+import random
+import re
+import time
 from pathlib import Path
 
 from transformers import AutoTokenizer, AutoModelForCausalLM

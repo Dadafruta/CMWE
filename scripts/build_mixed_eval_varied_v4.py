@@ -5,7 +5,11 @@ Run:
   python -m scripts.build_mixed_eval_varied_v4 --help
 """
 
-import argparse, json, random, re, string
+import argparse
+import json
+import random
+import re
+import string
 from collections import Counter
 
 _ws = re.compile(r"\s+")
