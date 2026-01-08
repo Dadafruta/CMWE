@@ -43,3 +43,41 @@ __pycache__/
 *.log
 # --- END CMWE local/venv/cache ---
 /tmp/cmwe_smoke_*
+
+# local env / caches
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+
+# local outputs
+logs/
+tmp/
+*.bak
+*.bak.*
+*.pre_patch.*
+*.pre_restore.*
+
+# local env / caches
+.venv/
+__pycache__/
+*.pyc
+
+# outputs / artifacts
+logs/
+tmp/
+*.bak
+*.bak.*
+*.pre_patch.*
+*.pre_restore.*
+results/
+# local backups
+_local_backups/
+# rag artifacts (usually generated)
+rag/*.index
+rag/*.pkl
+# detector artifacts (usually generated)
+detector/*.joblib
+# --- local/generated ---
+.ipynb_checkpoints/
