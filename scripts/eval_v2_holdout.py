@@ -187,26 +187,13 @@ def main() -> int:
     model.load_adapter(ADP_CITE, adapter_name="citation_guard")
 
 
-def gen(prompt, max_new_tokens: int = 128, **gen_kwargs):
-    """PATCH_GEN_ROBUST_DECODE_ONLY_NEW_TOKENS_V12: Generate and return ONLY newly generated text (not the prompt).
-
-    Robustness goals:
-      - Discover tokenizer/model from globals or caller stack if not explicitly passed
-      - Never treat a *class* (e.g., peft.PeftModel) as the model instance
-      - Prefer tokenizer whose vocab size matches model vocab size (common <unk> spam root cause)
-      - Auto-recover by loading tokenizer from the model name_or_path if mismatch / <unk> spam
-      - Decode ONLY the newly generated ids; trim at EOS/PAD; strip residual "<unk>"
-    """
+def gen(prompt, max_new_tokens: int = 640, **gen_kwargs):
+    """PATCH_GEN_ROBUST_DECODE_ONLY_NEW_TOKENS_V11: Generate+decode ONLY newly generated text (not the prompt), robust to wrappers and tokenizer mismatch."""
     import inspect
     import re
     import torch
+    from transformers import AutoTokenizer
 
-    try:
-        from transformers import AutoTokenizer
-    except Exception:
-        AutoTokenizer = None
-
-    # ---- helpers ----
     def _is_class(o) -> bool:
         try:
             return inspect.isclass(o) or isinstance(o, type)
@@ -215,52 +202,103 @@ def gen(prompt, max_new_tokens: int = 128, **gen_kwargs):
 
     def _callable_attr(o, name: str) -> bool:
         try:
-            v = getattr(o, name, None)
-            return v is not None and callable(v)
+            return callable(getattr(o, name, None))
         except Exception:
             return False
 
-    def _is_tokenizer(o) -> bool:
+    def _is_tok(o) -> bool:
         if o is None or _is_class(o):
             return False
-        return (_callable_attr(o, "decode") or _callable_attr(o, "batch_decode")) and (
+        return _callable_attr(o, "decode") and (
             _callable_attr(o, "__call__") or _callable_attr(o, "encode")
         )
 
     def _is_model(o) -> bool:
         if o is None or _is_class(o):
             return False
-        try:
-            if not isinstance(o, torch.nn.Module):
-                return False
-        except Exception:
-            pass
         return _callable_attr(o, "generate")
 
-    def _tok_vocab_size(tok):
-        if tok is None:
-            return None
-        try:
-            return int(len(tok))
-        except Exception:
-            pass
-        try:
-            vs = getattr(tok, "vocab_size", None)
-            return int(vs) if vs is not None else None
-        except Exception:
-            return None
+    def _find_in_stack(keys, pred):
+        g = globals()
+        for k in keys:
+            if k in g and pred(g[k]):
+                return g[k]
+        fr = inspect.currentframe()
+        fr = fr.f_back if fr is not None else None
+        depth = 0
+        while fr is not None and depth < 40:
+            for k in keys:
+                if k in fr.f_locals and pred(fr.f_locals[k]):
+                    return fr.f_locals[k]
+                if k in fr.f_globals and pred(fr.f_globals[k]):
+                    return fr.f_globals[k]
+            fr = fr.f_back
+            depth += 1
+        return None
+
+    # allow explicit overrides
+    tok = gen_kwargs.pop("tok", None) or gen_kwargs.pop("tokenizer", None)
+    if not _is_tok(tok):
+        tok = _find_in_stack(["tok", "tokenizer", "TOK", "TOKENIZER"], _is_tok)
+
+    model = (
+        gen_kwargs.pop("model", None)
+        or gen_kwargs.pop("mdl", None)
+        or gen_kwargs.pop("m", None)
+        or gen_kwargs.pop("lm", None)
+    )
+    if not _is_model(model):
+        model = _find_in_stack(
+            ["model", "mdl", "m", "lm", "base_model", "guard_model"], _is_model
+        )
+
+    if tok is None or model is None:
+        raise RuntimeError(
+            "gen(): could not find tokenizer/model in args, globals, or caller stack."
+        )
+
+    gen_model = model  # keep wrapper for generate (adapters/DDP)
+
+    def _unwrap(m):
+        seen = set()
+        while True:
+            if id(m) in seen:
+                break
+            seen.add(id(m))
+
+            # DDP/DataParallel
+            if hasattr(m, "module") and _is_model(getattr(m, "module", None)):
+                m = m.module
+                continue
+
+            # PEFT-style
+            if hasattr(m, "get_base_model") and callable(
+                getattr(m, "get_base_model", None)
+            ):
+                try:
+                    bm = m.get_base_model()
+                    if _is_model(bm):
+                        m = bm
+                        continue
+                except Exception:
+                    pass
+
+            if hasattr(m, "base_model") and _is_model(getattr(m, "base_model", None)):
+                m = m.base_model
+                continue
+
+            break
+        return m
+
+    base_model = _unwrap(gen_model)
 
     def _model_vocab_size(m):
         if m is None:
             return None
-        try:
-            cfg = getattr(m, "config", None)
-            if cfg is not None:
-                vs = getattr(cfg, "vocab_size", None)
-                if vs is not None:
-                    return int(vs)
-        except Exception:
-            pass
+        cfg = getattr(m, "config", None)
+        vs = getattr(cfg, "vocab_size", None)
+        if isinstance(vs, int) and vs > 0:
+            return vs
         try:
             emb = m.get_input_embeddings()
             if emb is not None and hasattr(emb, "weight"):
@@ -269,231 +307,179 @@ def gen(prompt, max_new_tokens: int = 128, **gen_kwargs):
             pass
         return None
 
-    def _model_name(m):
-        for obj in (getattr(m, "config", None), m):
-            if obj is None:
-                continue
-            for k in ("_name_or_path", "name_or_path", "model_name", "model_id"):
-                try:
-                    v = getattr(obj, k, None)
-                    if isinstance(v, str) and v.strip():
-                        return v
-                except Exception:
-                    continue
-        return None
-
-    def _load_tok_for_model(m):
-        if AutoTokenizer is None:
+    def _tok_vocab_size(t):
+        try:
+            return int(len(t))
+        except Exception:
             return None
-        name = _model_name(m)
-        if not name:
-            return None
-        cache = globals().setdefault("_GEN_PATCH_TOK_CACHE_V12", {})
-        if name in cache:
-            return cache[name]
 
-        tok2 = None
-        for kwargs in (
-            {"trust_remote_code": True, "local_files_only": True},
-            {"trust_remote_code": True},
-            {},
-        ):
-            try:
-                tok2 = AutoTokenizer.from_pretrained(name, use_fast=True, **kwargs)
-                break
-            except Exception:
+    def _model_paths(m):
+        paths = []
+        for attr in ["name_or_path", "model_name_or_path"]:
+            v = getattr(m, attr, None)
+            if isinstance(v, str) and v and v not in paths:
+                paths.append(v)
+        cfg = getattr(m, "config", None)
+        for attr in ["_name_or_path", "name_or_path", "model_name_or_path"]:
+            v = getattr(cfg, attr, None)
+            if isinstance(v, str) and v and v not in paths:
+                paths.append(v)
+        return paths
+
+    # tokenizer recovery (cache)
+    cache = getattr(gen, "_tok_cache", None)
+    if cache is None:
+        cache = {}
+        setattr(gen, "_tok_cache", cache)
+
+    def _maybe_load_tok_from_model():
+        paths = _model_paths(base_model) + _model_paths(gen_model)
+        for mp in paths:
+            if mp in cache:
+                t2 = cache[mp]
+            else:
+                t2 = None
                 try:
-                    tok2 = AutoTokenizer.from_pretrained(name, use_fast=False, **kwargs)
-                    break
+                    t2 = AutoTokenizer.from_pretrained(
+                        mp, use_fast=False, trust_remote_code=True
+                    )
                 except Exception:
-                    tok2 = None
-
-        if tok2 is not None:
-            cache[name] = tok2
-        return tok2
-
-    def _find_from_frames(pred, names):
-        g = globals()
-        for n in names:
-            if n in g and pred(g[n]):
-                return g[n]
-
-        fr = inspect.currentframe()
-        depth = 0
-        while fr is not None and depth < 60:
-            fr = fr.f_back
-            depth += 1
-            if fr is None:
-                break
-            for scope in (fr.f_locals, fr.f_globals):
-                for n in names:
                     try:
-                        if n in scope and pred(scope[n]):
-                            return scope[n]
+                        t2 = AutoTokenizer.from_pretrained(mp, trust_remote_code=True)
                     except Exception:
-                        continue
+                        t2 = None
+                cache[mp] = t2
+            if _is_tok(t2):
+                return t2
         return None
 
-    tok_guess = _find_from_frames(
-        _is_tokenizer, ("tok", "tokenizer", "TOKENIZER", "_tok", "_tokenizer")
-    )
-    model_guess = _find_from_frames(
-        _is_model, ("model", "mdl", "lm", "MODEL", "_model", "base_model", "base")
-    )
+    # If vocab sizes disagree, prefer tokenizer loaded from model
+    mv = _model_vocab_size(base_model) or _model_vocab_size(gen_model)
+    tv = _tok_vocab_size(tok)
+    if mv is not None and tv is not None and mv != tv:
+        t2 = _maybe_load_tok_from_model()
+        if _is_tok(t2) and _tok_vocab_size(t2) == mv:
+            tok = t2
 
-    if model_guess is None:
-        raise RuntimeError(
-            "gen(): could not find a torch.nn.Module model with .generate() (searched globals + caller stack)"
-        )
-
-    # unwrap only DDP-style wrappers; DO NOT unwrap PEFT adapters away
-    model = model_guess
+    # device
+    device = None
     try:
-        if hasattr(model, "module") and isinstance(
-            getattr(model, "module"), torch.nn.Module
-        ):
-            model = model.module
+        device = next(gen_model.parameters()).device
+    except Exception:
+        try:
+            device = next(base_model.parameters()).device
+        except Exception:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # build inputs
+    input_ids = None
+    if isinstance(prompt, dict) and "input_ids" in prompt:
+        inputs = dict(prompt)
+        if torch.is_tensor(inputs["input_ids"]):
+            inputs = {
+                k: (v.to(device) if torch.is_tensor(v) else v)
+                for k, v in inputs.items()
+            }
+            input_ids = inputs["input_ids"]
+        else:
+            input_ids = torch.tensor(
+                inputs["input_ids"], dtype=torch.long, device=device
+            ).unsqueeze(0)
+            inputs["input_ids"] = input_ids
+            if "attention_mask" not in inputs:
+                inputs["attention_mask"] = torch.ones_like(input_ids)
+    elif torch.is_tensor(prompt):
+        input_ids = prompt.to(device)
+        if input_ids.dim() == 1:
+            input_ids = input_ids.unsqueeze(0)
+        inputs = {"input_ids": input_ids}
+    else:
+        # assume string-ish
+        inputs = tok(str(prompt), return_tensors="pt")
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        input_ids = inputs.get("input_ids")
+
+    # eos/pad
+    eos = gen_kwargs.pop("eos_token_id", None)
+    pad = gen_kwargs.pop("pad_token_id", None)
+    if eos is None:
+        eos = getattr(getattr(gen_model, "config", None), "eos_token_id", None)
+        if eos is None:
+            eos = getattr(tok, "eos_token_id", None)
+    if pad is None:
+        pad = getattr(getattr(gen_model, "config", None), "pad_token_id", None)
+        if pad is None:
+            pad = getattr(tok, "pad_token_id", None) or eos
+
+    try:
+        if getattr(tok, "pad_token_id", None) is None and eos is not None:
+            tok.pad_token_id = eos
     except Exception:
         pass
 
-    # pick tokenizer: prefer vocab-size match (prevents <unk> spam from mismatch)
-    tok = tok_guess
-    vs_m = _model_vocab_size(model)
-    if tok is not None and vs_m is not None:
-        vs_t = _tok_vocab_size(tok)
-        if vs_t is None or abs(vs_t - vs_m) > 64:
-            tok = None
+    # generation params
+    if "max_new_tokens" not in gen_kwargs and "max_length" not in gen_kwargs:
+        gen_kwargs["max_new_tokens"] = int(max_new_tokens)
+    gen_kwargs.setdefault("do_sample", False)
 
-    tok_loaded = None
-    if tok is None:
-        tok_loaded = _load_tok_for_model(model)
-        tok = tok_loaded or tok_guess
-
-    if tok is None:
-        raise RuntimeError(
-            "gen(): could not find tokenizer (and AutoTokenizer fallback failed)"
+    with torch.no_grad():
+        out = gen_model.generate(
+            **inputs, eos_token_id=eos, pad_token_id=pad, **gen_kwargs
         )
 
-    # device
-    device = getattr(model, "device", None)
-    if device is None:
+    # handle GenerateOutput
+    if hasattr(out, "sequences"):
+        out_ids = out.sequences
+    else:
+        out_ids = out
+
+    if isinstance(out_ids, (list, tuple)):
+        out_ids = out_ids[0]
+
+    if torch.is_tensor(out_ids) and out_ids.dim() == 2:
+        out_seq = out_ids[0]
+    else:
+        out_seq = out_ids
+
+    in_len = int(input_ids.shape[-1]) if torch.is_tensor(input_ids) else 0
+    new_ids = out_seq[in_len:] if (torch.is_tensor(out_seq) and in_len > 0) else out_seq
+    if (
+        torch.is_tensor(new_ids)
+        and new_ids.numel() == 0
+        and torch.is_tensor(out_seq)
+        and out_seq.numel() > 0
+    ):
+        new_ids = out_seq
+
+    def _decode(t):
         try:
-            device = next(model.parameters()).device
+            ids = new_ids.tolist() if torch.is_tensor(new_ids) else list(new_ids)
+            return t.decode(ids, skip_special_tokens=True)
         except Exception:
-            device = torch.device("cpu")
+            try:
+                return t.decode(new_ids, skip_special_tokens=True)
+            except Exception:
+                return ""
 
-    def _move_to_device(d):
-        out = {}
-        for k, v in d.items():
-            out[k] = v.to(device) if hasattr(v, "to") else v
-        return out
+    s = _decode(tok)
 
-    def _run_with(tok_use):
-        # build inputs
-        if isinstance(prompt, dict) and "input_ids" in prompt:
-            inputs = _move_to_device(prompt)
-            ptxt = None
-        else:
-            ptxt = prompt if isinstance(prompt, str) else str(prompt)
-            inputs = _move_to_device(tok_use(ptxt, return_tensors="pt"))
+    # if we see <unk>, try swapping tokenizer from model path and/or re-decoding
+    if "<unk>" in s:
+        t2 = _maybe_load_tok_from_model()
+        if _is_tok(t2):
+            s2 = _decode(t2)
+            if s2 and s2.count("<unk>") < s.count("<unk>"):
+                tok = t2
+                s = s2
 
-        input_ids = inputs.get("input_ids")
-        if input_ids is None:
-            raise RuntimeError("gen(): tokenizer did not return input_ids")
+    # stop residual <unk> spam / clean up
+    s = re.sub(r"(\s*<unk>\s*)+$", "", s).strip()
+    if s.count("<unk>") > 5:
+        s = re.sub(r"<unk>\s*", "", s).strip()
 
-        # generation args
-        gk = dict(gen_kwargs)
-        gk.setdefault("max_new_tokens", max_new_tokens)
-        gk.setdefault("do_sample", False)
-
-        if "pad_token_id" not in gk:
-            pid = getattr(tok_use, "pad_token_id", None) or getattr(
-                tok_use, "eos_token_id", None
-            )
-            if pid is not None:
-                gk["pad_token_id"] = int(pid)
-
-        if "eos_token_id" not in gk:
-            eid = getattr(tok_use, "eos_token_id", None)
-            if eid is not None:
-                gk["eos_token_id"] = int(eid)
-
-        # ban <unk> token id if present (often helps)
-        unk_id = getattr(tok_use, "unk_token_id", None)
-        if unk_id is not None and "bad_words_ids" not in gk:
-            gk["bad_words_ids"] = [[int(unk_id)]]
-
-        with torch.no_grad():
-            out_ids = model.generate(**inputs, **gk)
-
-        if isinstance(out_ids, (tuple, list)):
-            out_ids = out_ids[0]
-
-        seq = (
-            out_ids[0].tolist()
-            if getattr(out_ids, "ndim", 0) == 2
-            else out_ids.tolist()
-        )
-        in_seq = (
-            input_ids[0].tolist()
-            if getattr(input_ids, "ndim", 0) == 2
-            else input_ids.tolist()
-        )
-        new_ids = seq[len(in_seq) :] if len(seq) >= len(in_seq) else seq
-
-        # trim at EOS/PAD
-        stop = set()
-        for _id in (
-            getattr(tok_use, "eos_token_id", None),
-            getattr(tok_use, "pad_token_id", None),
-        ):
-            if _id is not None:
-                stop.add(int(_id))
-        trimmed = []
-        for tid in new_ids:
-            tid = int(tid)
-            if stop and tid in stop:
-                break
-            trimmed.append(tid)
-        new_ids = trimmed
-
-        # decode ONLY the new ids
-        text = tok_use.decode(
-            new_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
-        )
-
-        # strip residual "<unk>" strings
-        unk_tok = getattr(tok_use, "unk_token", None)
-        if isinstance(unk_tok, str) and unk_tok:
-            text = text.replace(unk_tok, "")
-        text = re.sub(r"(?:<unk>\s*)+", "", text).strip()
-
-        # compute unk spam score from raw decode (no skipping)
-        raw = tok_use.decode(
-            new_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-        )
-        raw_unk = raw.count("<unk>")
-        if isinstance(unk_tok, str) and unk_tok and unk_tok != "<unk>":
-            raw_unk += raw.count(unk_tok)
-
-        return text, raw_unk, len(new_ids)
-
-    text, raw_unk, n_new = _run_with(tok)
-
-    # if empty or lots of unk spam, retry with tokenizer loaded from model (if available)
-    if (not text or raw_unk >= max(3, n_new // 4)) and tok_loaded is None:
-        tok_loaded = _load_tok_for_model(model)
-
-    if tok_loaded is not None and tok_loaded is not tok:
-        text2, raw_unk2, _ = _run_with(tok_loaded)
-        if text2 and (not text or raw_unk2 < raw_unk):
-            text = text2
-
-    # last resort: never return empty
-    if not text:
-        text = "N/A"
-
-    return text
+    # final normalize whitespace
+    s = re.sub(r"[ \t]+", " ", s).strip()
+    return s
 
 
 if __name__ == "__main__":
