@@ -14,6 +14,18 @@ Writes:
 
 from __future__ import annotations
 
+# --- CMWE_OUTFIX_RUNTIME_V1: ensure scoreable CSV even if upstream forgets to write outputs ---
+from scripts.cmwe_outfix_runtime import install as _cmwe_outfix_install
+
+_cmwe_outfix_install()
+# --- end CMWE_OUTFIX_RUNTIME_V1 ---
+
+# --- PATCH_CMWE_GEN_OUTS_GLOBALS_V1 ---
+CMWE_GEN_OUTS = []  # decoded assistant generations (strings), in-order
+CMWE_GEN_OUTS_CURSOR = 0  # how many have been attached to rows
+# --- end PATCH_CMWE_GEN_OUTS_GLOBALS_V1 ---
+
+
 import argparse
 import csv
 import json
@@ -116,6 +128,39 @@ def _cmwe_capture_rows_and_path(rows, out_csv) -> None:
 
 
 def _cmwe_write_rows_csv(rows, out_csv) -> None:
+    # --- PATCH_CMWE_ATTACH_OUTS_TO_ROWS_V1 ---
+    try:
+        _outs = globals().get("CMWE_GEN_OUTS", [])
+        _cur = int(globals().get("CMWE_GEN_OUTS_CURSOR", 0) or 0)
+        if isinstance(_outs, list) and _outs:
+            for _r in rows:
+                if not isinstance(_r, dict):
+                    continue
+                _has = False
+                if (
+                    "out" in _r
+                    and isinstance(_r.get("out"), str)
+                    and _r.get("out", "").strip()
+                ):
+                    _has = True
+                if (
+                    (not _has)
+                    and "a" in _r
+                    and isinstance(_r.get("a"), str)
+                    and _r.get("a", "").strip()
+                ):
+                    _has = True
+                if _has:
+                    continue
+                if _cur < len(_outs):
+                    _r["out"] = _outs[_cur]
+                    _r["a"] = _outs[_cur]
+                    _cur += 1
+            globals()["CMWE_GEN_OUTS_CURSOR"] = _cur
+    except Exception:
+        pass
+    # --- end PATCH_CMWE_ATTACH_OUTS_TO_ROWS_V1 ---
+
     if out_csv is None:
         return
     if not _cmwe_is_rank0():
@@ -697,6 +742,14 @@ def gen(prompt, max_new_tokens: int = 640, **gen_kwargs):
 
     # final normalize whitespace
     s = re.sub(r"[ \t]+", " ", s).strip()
+    # --- PATCH_CMWE_STASH_DECODED_S_V1 ---
+    try:
+        _outs = globals().get("CMWE_GEN_OUTS")
+        if isinstance(_outs, list):
+            _outs.append(s)
+    except Exception:
+        pass
+    # --- end PATCH_CMWE_STASH_DECODED_S_V1 ---
     return s
 
 
